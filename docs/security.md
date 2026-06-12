@@ -20,4 +20,4 @@ Uncaught exceptions are strictly forbidden. All logic exceptions derive from `ql
 The CLI wrapper catches these errors and safely formats them into user-friendly responses. **Internal stack traces or C++ segfaults are never exposed to the end-user.**
 
 ## Path Traversal Protection
-Adapters inspect source paths to explicitly block inputs containing `..` or `/` patterns, isolating execution strictly to the expected directory.
+A centralized path validator (`src/security/path_validator.cpp`) blocks `..` path components to prevent directory traversal attacks. Subdirectory and absolute paths are allowed, so queries like `from data/users.csv` or `from /home/user/data.csv` work normally.

@@ -1,6 +1,7 @@
 #include "adapters/csv/csv_adapter.h"
 #include "errors/errors.h"
 #include "security/limits.h"
+#include "security/path_validator.h"
 #include <sstream>
 
 namespace qle {
@@ -14,10 +15,7 @@ CsvAdapter::~CsvAdapter() {
 }
 
 void CsvAdapter::Open(const std::string& source) {
-    // Basic path traversal protection
-    if (source.find("..") != std::string::npos || source.find('/') != std::string::npos) {
-        throw errors::SecurityError("Path traversal or nested directories not allowed in MVP.");
-    }
+    security::ValidateSourcePath(source);
     
     file_.open(source);
     if (!file_.is_open()) {

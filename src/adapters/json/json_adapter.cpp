@@ -1,6 +1,7 @@
 #include "adapters/json/json_adapter.h"
 #include "errors/errors.h"
 #include "security/limits.h"
+#include "security/path_validator.h"
 #include <fstream>
 #include <sstream>
 #include <cctype>
@@ -16,9 +17,7 @@ JsonAdapter::~JsonAdapter() {
 }
 
 void JsonAdapter::Open(const std::string& source) {
-    if (source.find("..") != std::string::npos || source.find('/') != std::string::npos) {
-        throw errors::SecurityError("Path traversal or nested directories not allowed in MVP.");
-    }
+    security::ValidateSourcePath(source);
     
     std::ifstream file(source);
     if (!file.is_open()) {

@@ -121,7 +121,7 @@ Token Lexer::ReadIdentifierOrKeyword() {
     size_t start_col = col_;
     std::string value;
 
-    while (!IsAtEnd() && (std::isalnum(Peek()) || Peek() == '_' || Peek() == '.')) {
+    while (!IsAtEnd() && (std::isalnum(Peek()) || Peek() == '_' || Peek() == '.' || Peek() == '/')) {
         value += Advance();
     }
 
