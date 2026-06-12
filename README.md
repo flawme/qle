@@ -4,10 +4,14 @@ A lightweight, interpreted query language for querying multiple data sources usi
 
 ## Features
 
-- Parse and execute queries directly without generating machine code.
-- Strict memory-safe design patterns and explicit limits (recursion depth, file size, token limits).
-- Pluggable adapter architecture. Currently supports CSV and JSON.
-- Execute queries directly from the CLI or via .qle files.
+- **Blazing Fast**: Optimized C++17 runtime with zero external dependencies.
+- **Interactive REPL**: Explore your data interactively via the built-in shell.
+- **Universal Querying**: Use SQL-like syntax (`SELECT`, `WHERE`, `ORDER BY`, `LIMIT`, `GROUP BY`) on flat files.
+- **Cross-Platform SQLite**: Natively query `.sqlite` files. The SQLite engine is bundled directly into the binary!
+- **Data Transformations**: Perform inline string manipulation using `upper()`, `lower()`, `concat()`, etc.
+- **Aggregations**: Bucket your data using `GROUP BY` and compute `sum`, `avg`, `min`, `max`.
+- **Modular Adapters**: Currently supports `CSV`, `JSON`, and `SQLite`.
+- **Typo Suggestions**: Helpful Levenshtein distance-based suggestions when you mistype a field name.
 
 ## Build
 
