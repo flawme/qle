@@ -6,13 +6,20 @@
 #include "logger/logger.h"
 #include <iostream>
 #include <cassert>
+#include <fstream>
+#include <memory>
+#include <array>
+#include <cstdio>
+#include <thread>
 
 using namespace qle;
 void TestAggregationsAndGroupBy();
 void TestInlineFunctions();
 void TestSqliteAdapter();
 void TestReplEdgeCases();
-
+void TestCliLimits();
+void TestMaxRowsLimit();
+void TestTimeoutLimit();
 
 void TestLexer() {
     std::cout << "Running Lexer Tests..." << std::endl;
@@ -98,6 +105,29 @@ void TestAdversarialParsing() {
 
 void TestMalformedDataSources() {
     std::cout << "Running Malformed Data Sources Tests..." << std::endl;
+    // Broken CSV quotes, missing JSON braces
+    std::ofstream bad_csv("tests/bad_quotes.csv");
+    bad_csv << "id,name\n1,\"unclosed quote\n2,bob\n";
+    bad_csv.close();
+
+    std::ofstream bad_json("tests/bad_braces.json");
+    bad_json << "{ \"id\": 1, \"name\": \"alice\" "; // Missing closing brace
+    bad_json.close();
+
+    try {
+        runtime::Runtime rt;
+        lexer::Lexer lexer("from tests/bad_quotes.csv select *");
+        parser::Parser parser(lexer.Tokenize());
+        rt.Execute(parser.Parse().get());
+    } catch (const errors::QleException&) {}
+
+    try {
+        runtime::Runtime rt;
+        lexer::Lexer lexer("from tests/bad_braces.json select *");
+        parser::Parser parser(lexer.Tokenize());
+        rt.Execute(parser.Parse().get());
+    } catch (const errors::QleException&) {}
+
     try {
         runtime::Runtime rt;
         lexer::Lexer lexer("from tests/malformed.json select *");
@@ -127,6 +157,22 @@ void TestBoundaryConditions() {
         lexer::Lexer lexer("from \xff select *");
         lexer.Tokenize();
     } catch (const errors::QleException&) {}
+
+    // Type coercion (string vs float), Arithmetic overflow
+    std::string queries[] = {
+        "from tests/empty.json where a == \"string\" > 10 select a",
+        "from tests/empty.json select 9999999999999999999999999999999999999999",
+        "from ../../../etc/passwd select *", // File path manipulation
+        "from tests/empty.json select limit 5" // Unexpected grammar combinations
+    };
+    for (const auto& q : queries) {
+        try {
+            lexer::Lexer lexer(q);
+            parser::Parser parser(lexer.Tokenize());
+            runtime::Runtime rt;
+            rt.Execute(parser.Parse().get());
+        } catch (const errors::QleException&) {}
+    }
 }
 
 int main() {
@@ -143,6 +189,9 @@ int main() {
     TestInlineFunctions();
     TestSqliteAdapter();
     TestReplEdgeCases();
+    TestCliLimits();
+    TestMaxRowsLimit();
+    TestTimeoutLimit();
     std::cout << "All extreme tests passed!" << std::endl;
     return 0;
 }
@@ -203,6 +252,78 @@ void TestSqliteAdapter() {
 
 void TestReplEdgeCases() {
     std::cout << "Running REPL Edge Cases..." << std::endl;
-    // We cannot mock std::cin easily here without redefining it, but we can test REPL via parser directly
-    // REPL handles parser errors and runtime errors without crashing.
+}
+
+// Helper to run shell commands and capture output
+std::string ExecCmd(const char* cmd) {
+    std::array<char, 128> buffer;
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    if (!pipe) return "";
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        result += buffer.data();
+    }
+    return result;
+}
+
+void TestCliLimits() {
+    std::cout << "Running CLI Limits Tests..." << std::endl;
+    // We assume `qle` binary is available in the parent directory (build dir) or current dir
+    // Test that passing invalid numeric values does not crash the program but outputs an error
+    std::string out1 = ExecCmd("./qle --max-rows abc 2>&1");
+    if (out1.empty() || out1.find("not found") != std::string::npos || out1.find("No such file") != std::string::npos) {
+        out1 = ExecCmd("../qle --max-rows abc 2>&1");
+    }
+    assert(out1.find("Command line parsing error") != std::string::npos || out1.find("Error") != std::string::npos);
+
+    std::string out2 = ExecCmd("./qle --max-file-size 1 tests/empty.json 2>&1");
+    if (out2.empty() || out2.find("not found") != std::string::npos || out2.find("No such file") != std::string::npos) {
+        out2 = ExecCmd("../qle --max-file-size 1 tests/empty.json 2>&1");
+    }
+    assert(out2.find("exceeds maximum allowed size") != std::string::npos || out2.find("Error") != std::string::npos);
+}
+
+void TestMaxRowsLimit() {
+    std::cout << "Running Max Rows Limit Tests..." << std::endl;
+    std::remove("million.csv");
+    std::ofstream out("million.csv");
+    out << "id,val\n";
+    for (int i = 0; i < 20000; ++i) {
+        out << i << ",test\n";
+    }
+    out.close();
+
+    size_t old_limit = security::Limits::Get().max_rows_processed;
+    security::Limits::Get().max_rows_processed = 10000; // Set to lower threshold
+    bool caught = false;
+    try {
+        runtime::Runtime rt;
+        lexer::Lexer lexer("from million.csv select *");
+        parser::Parser parser(lexer.Tokenize());
+        rt.Execute(parser.Parse().get());
+    } catch (const errors::SecurityError& e) {
+        caught = true;
+    }
+    security::Limits::Get().max_rows_processed = old_limit;
+    assert(caught && "Processing beyond max rows limit should throw SecurityError");
+}
+
+void TestTimeoutLimit() {
+    std::cout << "Running Timeout Limit Tests..." << std::endl;
+    size_t old_timeout = security::Limits::Get().max_execution_time_ms;
+    security::Limits::Get().max_execution_time_ms = 0; // Extremely low timeout
+    bool caught = false;
+    try {
+        runtime::Runtime rt;
+        lexer::Lexer lexer("from million.csv select *");
+        parser::Parser parser(lexer.Tokenize());
+        // Simulating slow processing by relying on the 0ms timeout check inside the first 10k rows
+        rt.Execute(parser.Parse().get());
+    } catch (const errors::SecurityError& e) {
+        if (std::string(e.what()).find("Maximum execution time exceeded") != std::string::npos) {
+            caught = true;
+        }
+    }
+    security::Limits::Get().max_execution_time_ms = old_timeout;
+    assert(caught && "Hanging or slow query should throw SecurityError on timeout");
 }

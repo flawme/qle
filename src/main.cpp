@@ -12,6 +12,7 @@
 #include <sstream>
 #include <chrono>
 #include <vector>
+#include <stdexcept>
 
 using namespace qle;
 
@@ -89,19 +90,20 @@ CliOptions ParseFlags(int argc, char** argv) {
             }
             continue;
         }
-        if (arg == "--max-file-size") {
-            if (i + 1 >= argc) std::exit(1);
-            qle::security::Limits::Get().max_file_size = std::stoull(argv[++i]);
-            continue;
-        }
-        if (arg == "--max-rows") {
-            if (i + 1 >= argc) std::exit(1);
-            qle::security::Limits::Get().max_rows_processed = std::stoull(argv[++i]);
-            continue;
-        }
-        if (arg == "--timeout") {
-            if (i + 1 >= argc) std::exit(1);
-            qle::security::Limits::Get().max_execution_time_ms = std::stoull(argv[++i]);
+        if (arg == "--max-file-size" || arg == "--max-rows" || arg == "--timeout") {
+            if (i + 1 >= argc) {
+                std::cerr << "Error: " << arg << " requires a numeric argument\n";
+                std::exit(1);
+            }
+            try {
+                size_t val = std::stoull(argv[++i]);
+                if (arg == "--max-file-size") qle::security::Limits::Get().max_file_size = val;
+                else if (arg == "--max-rows") qle::security::Limits::Get().max_rows_processed = val;
+                else if (arg == "--timeout") qle::security::Limits::Get().max_execution_time_ms = val;
+            } catch (const std::exception& e) {
+                std::cerr << "Error: Invalid numeric value for " << arg << "\n";
+                std::exit(1);
+            }
             continue;
         }
 
@@ -141,9 +143,13 @@ void ExecuteQuery(const std::string& query, const CliOptions& opts) {
 int main(int argc, char** argv) {
     Debug::SetLogLevel(LogLevel::INFO);
 
-
-
-    CliOptions opts = ParseFlags(argc, argv);
+    CliOptions opts;
+    try {
+        opts = ParseFlags(argc, argv);
+    } catch (const std::exception& e) {
+        std::cerr << "Command line parsing error: " << e.what() << std::endl;
+        return 1;
+    }
 
     if (opts.quiet) {
         Debug::Enable(false);
