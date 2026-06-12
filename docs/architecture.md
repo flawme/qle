@@ -19,7 +19,12 @@ The AST nodes are lightweight and strictly immutable after construction.
 - `ExpressionNode`: Represents binary operations or literal values.
 
 ## 4. Runtime (`src/runtime`)
-The Runtime executes the AST. It dynamically asks the Adapter factory for the correct data stream, iterates through the rows, evaluates the `WhereNode` conditional logic, and selects the fields defined in the `SelectNode`.
+The Runtime executes the AST. It dynamically asks the Adapter factory for the correct data stream, iterates through the rows, evaluates the `WhereNode` conditional logic, and selects the fields defined in the `SelectNode`. It handles aggregation like `count` and sorts rows based on `OrderByNode`.
 
 ## 5. Adapters (`src/adapters`)
 Data extraction is entirely decoupled from the runtime. Adapters implement the `IAdapter` interface, guaranteeing `Open()`, `HasNext()`, `Next()`, and `Close()` functionality. Supported formats in V1 are CSV and JSON.
+
+## 6. Utils (`src/utils`)
+Utility helpers to enhance the end-user experience:
+- **Formatter:** Handles turning the raw row data into `table`, `json`, or `csv` outputs.
+- **Suggestions:** Implements the Levenshtein distance algorithm to provide "Did you mean?" typo corrections for unknown fields.
