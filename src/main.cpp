@@ -4,6 +4,7 @@
 #include "errors/errors.h"
 #include "logger/logger.h"
 #include "utils/formatter.h"
+#include "repl/repl.h"
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -124,10 +125,7 @@ void ExecuteQuery(const std::string& query, const CliOptions& opts) {
 int main(int argc, char** argv) {
     Debug::SetLogLevel(LogLevel::INFO);
 
-    if (argc < 2) {
-        std::cerr << HELP_TEXT;
-        return 1;
-    }
+
 
     CliOptions opts = ParseFlags(argc, argv);
 
@@ -136,8 +134,8 @@ int main(int argc, char** argv) {
     }
 
     if (opts.args.empty()) {
-        std::cerr << HELP_TEXT;
-        return 1;
+        repl::Repl::Start(opts.format, opts.show_time);
+        return 0;
     }
 
     if (opts.args[0] == "run" && opts.args.size() >= 2) {
