@@ -1,5 +1,17 @@
 # QLE Changelog
 
+## [v0.1.4] - 2026-06-12
+
+### Added
+- **Configurable Limits:** Security limits (`--max-file-size`, `--max-rows`, `--timeout`) can now be directly configured via CLI arguments to handle massive enterprise data workloads safely.
+- **QA Limit Tests:** Added extensive stress tests for processing multi-million row files and strict execution timeout edge cases.
+
+### Changed
+- **Zero-Copy Parsing:** Migrated `CsvAdapter` from standard string allocations to `std::string_view`, unlocking a massive reduction in memory allocation overhead during large file ingestion.
+- **Engine Locality:** Replaced heavy `std::map` usages in Row definitions and GroupBy logic with $O(1)$ `std::unordered_map` and linear arrays, resulting in significantly faster execution times.
+
+### Fixed
+- **CLI Exception Handing:** Fixed a critical bug where providing malformed alphanumeric strings to numeric CLI flags would cause an unhandled `std::invalid_argument` process crash.
 ## [v0.1.3] - 2026-06-12
 
 ### Added
