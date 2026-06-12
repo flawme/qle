@@ -1,5 +1,6 @@
 #include <limits>
 #include <map>
+#include "adapters/sqlite/sqlite_adapter.h"
 #include "runtime/runtime.h"
 #include "adapters/csv/csv_adapter.h"
 #include "adapters/json/json_adapter.h"
@@ -405,6 +406,7 @@ void Runtime::SortRows(std::vector<adapters::Row>& rows, const ast::OrderByNode*
         });
 }
 
+
 std::unique_ptr<adapters::IAdapter> Runtime::GetAdapterForSource(
     const std::string& source) {
     if (source.size() > 4 &&
@@ -414,6 +416,9 @@ std::unique_ptr<adapters::IAdapter> Runtime::GetAdapterForSource(
     if (source.size() > 5 &&
         source.substr(source.size() - 5) == ".json") {
         return std::make_unique<adapters::json::JsonAdapter>();
+    }
+    if (source.find(".sqlite") != std::string::npos || source.find(".db") != std::string::npos) {
+        return std::make_unique<adapters::SQLiteAdapter>();
     }
     throw errors::RuntimeError(
         "Unsupported source format or adapter not found for: " + source);
