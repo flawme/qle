@@ -24,6 +24,7 @@ void Runtime::SetFormat(utils::OutputFormat format) {
 void Runtime::Execute(const ast::QueryNode* query) {
     Debug::DebugLog("Runtime starting execution");
     rows_processed_ = 0;
+    start_time_ = std::chrono::steady_clock::now();
 
     const ast::SourceNode* source_node = query->GetSource();
     std::string source_name = source_node->GetSourceName();
@@ -208,6 +209,7 @@ void Runtime::ExecuteWithGroupBy(adapters::IAdapter& adapter,
         }
         adapters::Row row = adapter.Next();
         rows_processed_++;
+        if (rows_processed_ % 10000 == 0) CheckTimeout();
 
         bool include_row = true;
         if (where_node) {
@@ -281,6 +283,7 @@ void Runtime::ExecuteStreaming(adapters::IAdapter& adapter,
         }
         adapters::Row row = adapter.Next();
         rows_processed_++;
+        if (rows_processed_ % 10000 == 0) CheckTimeout();
 
         bool include_row = true;
         if (where_node) {
@@ -336,6 +339,7 @@ void Runtime::ExecuteWithOrderBy(adapters::IAdapter& adapter,
         }
         adapters::Row row = adapter.Next();
         rows_processed_++;
+        if (rows_processed_ % 10000 == 0) CheckTimeout();
 
         bool include_row = true;
         if (where_node) {
@@ -538,6 +542,14 @@ std::string Runtime::EvaluateExpression(const ast::ExpressionNode* expr,
     throw errors::RuntimeError(
         "Complex arithmetic expressions are not supported in MVP.",
         expr->GetToken().line, expr->GetToken().col);
+}
+
+void Runtime::CheckTimeout() {
+    auto now = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time_);
+    if (static_cast<size_t>(duration.count()) > security::Limits::Get().max_execution_time_ms) {
+        throw errors::SecurityError("Maximum execution time exceeded (" + std::to_string(security::Limits::Get().max_execution_time_ms) + " ms)");
+    }
 }
 
 } // namespace runtime

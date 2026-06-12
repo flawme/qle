@@ -5,6 +5,7 @@
 #include "utils/formatter.h"
 #include <memory>
 #include <vector>
+#include <chrono>
 
 namespace qle {
 namespace runtime {
@@ -45,7 +46,10 @@ private:
     bool HasAggregate(const ast::SelectNode* select_node);
     bool CheckIfContainsAggregate(const ast::ExpressionNode* expr);
 
+    void CheckTimeout();
+
     size_t rows_processed_;
+    std::chrono::time_point<std::chrono::steady_clock> start_time_;
     utils::OutputFormat format_;
     utils::Formatter formatter_;
 };

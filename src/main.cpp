@@ -5,6 +5,7 @@
 #include "logger/logger.h"
 #include "utils/formatter.h"
 #include "repl/repl.h"
+#include "security/limits.h"
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -13,8 +14,6 @@
 #include <vector>
 
 using namespace qle;
-
-static const char* VERSION_STRING = "qle v0.1.2";
 
 static const char* HELP_TEXT =
     "Usage:\n"
@@ -27,6 +26,9 @@ static const char* HELP_TEXT =
     "  --format <mode>     Set output format: table, csv, json (default: csv)\n"
     "  --time              Show execution time on stderr\n"
     "  --quiet             Suppress non-essential output\n"
+    "  --max-file-size <N> Set max file size in bytes (default 100MB)\n"
+    "  --max-rows <N>      Set max rows processed (default 1M)\n"
+    "  --timeout <N>       Set execution timeout in ms (default 30s)\n"
     "\n"
     "Examples:\n"
     "  qle \"from users.csv select *\"\n"
@@ -85,6 +87,21 @@ CliOptions ParseFlags(int argc, char** argv) {
                 std::cerr << "Error: unknown format '" << fmt << "'. Use table, csv, or json.\n";
                 std::exit(1);
             }
+            continue;
+        }
+        if (arg == "--max-file-size") {
+            if (i + 1 >= argc) std::exit(1);
+            qle::security::Limits::Get().max_file_size = std::stoull(argv[++i]);
+            continue;
+        }
+        if (arg == "--max-rows") {
+            if (i + 1 >= argc) std::exit(1);
+            qle::security::Limits::Get().max_rows_processed = std::stoull(argv[++i]);
+            continue;
+        }
+        if (arg == "--timeout") {
+            if (i + 1 >= argc) std::exit(1);
+            qle::security::Limits::Get().max_execution_time_ms = std::stoull(argv[++i]);
             continue;
         }
 
