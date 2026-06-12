@@ -2,28 +2,7 @@
 
 QLE uses a simplified SQL-like syntax targeted specifically at flat data files.
 
-## Basic Syntax
 
-A valid QLE query requires a `from` and a `select` clause. The `where`, `order by`, and `limit` clauses are optional.
-
-```text
-from <source_file>
-[where <condition>]
-select <field1, field2 | * | count>
-[order by <field> [asc|desc]]
-[limit <number>]
-```
-
-### Select Options
-- **Specific fields:** `select name, email`
-- **All fields:** `select *`
-- **Count matching rows:** `select count`
-
-### Supported Operators
-- Equality: `==`, `!=`
-- Comparison: `>`, `<`, `>=`, `<=`
-- Logical: `and`, `or`
-- Grouping: `(` and `)`
 
 ## Interactive REPL Shell
 To start an interactive session, simply run QLE without any arguments:
@@ -96,4 +75,17 @@ You can execute multiple query files sequentially:
 If you misspell a field name in your query, QLE will automatically suggest the closest matching field using Levenshtein distance:
 ```text
 Error: Unknown field: agge (Did you mean 'age'?)
+```
+
+## CLI Configuration & Limits
+
+QLE has strict security and execution limits to ensure the engine runs safely on embedded and resource-constrained environments. However, for production workloads or massive datasets, you can override these limits on the fly using CLI flags:
+
+- `--max-file-size <bytes>`: By default, QLE caps files at 100MB. Use this flag to increase the allowed size of input files.
+- `--max-rows <number>`: By default, QLE stops execution after processing 1,000,000 rows. Use this to allow scanning larger datasets.
+- `--timeout <ms>`: By default, queries are terminated after 30 seconds (30,000ms). Increase this if running very complex aggregation queries on large files.
+
+*Example:*
+```bash
+./qle --max-file-size 5368709120 --timeout 60000 "from huge_data.csv select count"
 ```
