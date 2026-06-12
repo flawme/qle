@@ -2,7 +2,6 @@
 
 #include "adapters/adapter.h"
 #include <string>
-#include <vector>
 
 namespace qle {
 namespace adapters {
@@ -22,11 +21,6 @@ private:
     void* stmt_;
     bool has_next_;
     Row current_row_;
-    
-    // For mock
-    bool is_mock_;
-    std::vector<Row> mock_data_;
-    size_t mock_index_;
 
     void FetchNext();
 };

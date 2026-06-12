@@ -106,7 +106,7 @@ std::string Runtime::EvaluateAggregate(const ast::ExpressionNode* expr, const st
     if (expr->IsFunctionCall()) {
         const lexer::Token& t = expr->GetToken();
         std::string func_name = t.value;
-        std::transform(func_name.begin(), func_name.end(), func_name.begin(), ::tolower);
+        std::transform(func_name.begin(), func_name.end(), func_name.begin(), [](unsigned char c) { return std::tolower(c); });
         
         bool is_agg = (func_name == "sum" || func_name == "avg" || func_name == "min" || func_name == "max" || func_name == "count");
         if (is_agg) {
@@ -164,12 +164,12 @@ std::string Runtime::EvaluateAggregate(const ast::ExpressionNode* expr, const st
             if (func_name == "upper") {
                 if (expr->GetArgs().size() != 1) throw errors::RuntimeError("upper() requires 1 argument", t.line, t.col);
                 std::string val = EvaluateAggregate(expr->GetArgs()[0].get(), bucket);
-                std::transform(val.begin(), val.end(), val.begin(), ::toupper);
+                std::transform(val.begin(), val.end(), val.begin(), [](unsigned char c) { return std::toupper(c); });
                 return val;
             } else if (func_name == "lower") {
                 if (expr->GetArgs().size() != 1) throw errors::RuntimeError("lower() requires 1 argument", t.line, t.col);
                 std::string val = EvaluateAggregate(expr->GetArgs()[0].get(), bucket);
-                std::transform(val.begin(), val.end(), val.begin(), ::tolower);
+                std::transform(val.begin(), val.end(), val.begin(), [](unsigned char c) { return std::tolower(c); });
                 return val;
             } else if (func_name == "concat") {
                 std::string res = "";
@@ -499,17 +499,17 @@ std::string Runtime::EvaluateExpression(const ast::ExpressionNode* expr,
     if (expr->IsFunctionCall()) {
         const lexer::Token& t = expr->GetToken();
         std::string func_name = t.value;
-        std::transform(func_name.begin(), func_name.end(), func_name.begin(), ::tolower);
+        std::transform(func_name.begin(), func_name.end(), func_name.begin(), [](unsigned char c) { return std::tolower(c); });
         
         if (func_name == "upper") {
             if (expr->GetArgs().size() != 1) throw errors::RuntimeError("upper() requires 1 argument", t.line, t.col);
             std::string val = EvaluateExpression(expr->GetArgs()[0].get(), row);
-            std::transform(val.begin(), val.end(), val.begin(), ::toupper);
+            std::transform(val.begin(), val.end(), val.begin(), [](unsigned char c) { return std::toupper(c); });
             return val;
         } else if (func_name == "lower") {
             if (expr->GetArgs().size() != 1) throw errors::RuntimeError("lower() requires 1 argument", t.line, t.col);
             std::string val = EvaluateExpression(expr->GetArgs()[0].get(), row);
-            std::transform(val.begin(), val.end(), val.begin(), ::tolower);
+            std::transform(val.begin(), val.end(), val.begin(), [](unsigned char c) { return std::tolower(c); });
             return val;
         } else if (func_name == "concat") {
             std::string res = "";

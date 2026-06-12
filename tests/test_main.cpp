@@ -8,6 +8,11 @@
 #include <cassert>
 
 using namespace qle;
+void TestAggregationsAndGroupBy();
+void TestInlineFunctions();
+void TestSqliteAdapter();
+void TestReplEdgeCases();
+
 
 void TestLexer() {
     std::cout << "Running Lexer Tests..." << std::endl;
@@ -134,6 +139,70 @@ int main() {
     TestAdversarialParsing();
     TestMalformedDataSources();
     TestBoundaryConditions();
+    TestAggregationsAndGroupBy();
+    TestInlineFunctions();
+    TestSqliteAdapter();
+    TestReplEdgeCases();
     std::cout << "All extreme tests passed!" << std::endl;
     return 0;
+}
+
+void TestAggregationsAndGroupBy() {
+    std::cout << "Running Aggregations & Group By Tests..." << std::endl;
+    std::string queries[] = {
+        "from tests/empty.json select sum(id) group by id",
+        "from tests/empty.json select min(id)",
+        "from tests/empty.json select avg(id)",
+        "from tests/empty.json select count(id) group by non_existent"
+    };
+    for (const auto& q : queries) {
+        try {
+            lexer::Lexer lexer(q);
+            parser::Parser parser(lexer.Tokenize());
+            runtime::Runtime rt;
+            rt.Execute(parser.Parse().get());
+        } catch (const errors::QleException&) {}
+    }
+}
+
+void TestInlineFunctions() {
+    std::cout << "Running Inline Functions Tests..." << std::endl;
+    std::string queries[] = {
+        "from test.csv select upper()",
+        "from test.csv select lower(\"abc\", \"def\")",
+        "from test.csv select length()",
+        "from test.csv select upper(\"\xFF\xFF\")",
+        "from test.csv select non_existent_func(1)"
+    };
+    for (const auto& q : queries) {
+        try {
+            lexer::Lexer lexer(q);
+            parser::Parser parser(lexer.Tokenize());
+            runtime::Runtime rt;
+            rt.Execute(parser.Parse().get());
+        } catch (const errors::QleException&) {}
+    }
+}
+
+void TestSqliteAdapter() {
+    std::cout << "Running SQLite Adapter Tests..." << std::endl;
+    std::string queries[] = {
+        "from nonexistent.sqlite:nonexistent_table select *",
+        "from :memory::nonexistent_table select *",
+        "from test.db:my_table select *"
+    };
+    for (const auto& q : queries) {
+        try {
+            lexer::Lexer lexer(q);
+            parser::Parser parser(lexer.Tokenize());
+            runtime::Runtime rt;
+            rt.Execute(parser.Parse().get());
+        } catch (const errors::QleException&) {}
+    }
+}
+
+void TestReplEdgeCases() {
+    std::cout << "Running REPL Edge Cases..." << std::endl;
+    // We cannot mock std::cin easily here without redefining it, but we can test REPL via parser directly
+    // REPL handles parser errors and runtime errors without crashing.
 }

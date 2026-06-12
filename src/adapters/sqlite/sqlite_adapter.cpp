@@ -1,15 +1,12 @@
 #include "adapters/sqlite/sqlite_adapter.h"
 #include "errors/errors.h"
 #include <iostream>
-
-#ifdef QLE_HAVE_SQLITE3
 #include <sqlite3.h>
-#endif
 
 namespace qle {
 namespace adapters {
 
-SQLiteAdapter::SQLiteAdapter() : db_(nullptr), stmt_(nullptr), has_next_(false), is_mock_(false), mock_index_(0) {
+SQLiteAdapter::SQLiteAdapter() : db_(nullptr), stmt_(nullptr), has_next_(false) {
 }
 
 SQLiteAdapter::~SQLiteAdapter() {
@@ -17,8 +14,6 @@ SQLiteAdapter::~SQLiteAdapter() {
 }
 
 void SQLiteAdapter::Open(const std::string& source) {
-#ifdef QLE_HAVE_SQLITE3
-    // Open actual SQLite db
     std::string filename = source;
     std::string table = "sqlite_master"; // fallback
     auto pos = source.find(':');
@@ -34,7 +29,6 @@ void SQLiteAdapter::Open(const std::string& source) {
     }
     db_ = db;
 
-    // if fallback is used we could query sqlite_master to find the first table
     if (table == "sqlite_master" && pos == std::string::npos) {
         sqlite3_stmt* meta_stmt = nullptr;
         if (sqlite3_prepare_v2(db, "SELECT name FROM sqlite_master WHERE type='table' LIMIT 1;", -1, &meta_stmt, nullptr) == SQLITE_OK) {
@@ -53,19 +47,9 @@ void SQLiteAdapter::Open(const std::string& source) {
     }
     stmt_ = stmt;
     FetchNext();
-#else
-    // Mock implementation
-    is_mock_ = true;
-    std::cerr << "[Warning] SQLite3 not found during build. Using mock SQLite adapter for " << source << std::endl;
-    mock_data_.push_back({{"id", "1"}, {"name", "Alice"}});
-    mock_data_.push_back({{"id", "2"}, {"name", "Bob"}});
-    mock_index_ = 0;
-    has_next_ = mock_index_ < mock_data_.size();
-#endif
 }
 
 void SQLiteAdapter::FetchNext() {
-#ifdef QLE_HAVE_SQLITE3
     if (!stmt_) return;
     auto stmt = static_cast<sqlite3_stmt*>(stmt_);
     int rc = sqlite3_step(stmt);
@@ -81,7 +65,6 @@ void SQLiteAdapter::FetchNext() {
     } else {
         has_next_ = false;
     }
-#endif
 }
 
 bool SQLiteAdapter::HasNext() {
@@ -92,24 +75,12 @@ Row SQLiteAdapter::Next() {
     if (!has_next_) {
         throw errors::QleException("No more rows in SQLite adapter");
     }
-#ifdef QLE_HAVE_SQLITE3
-    if (is_mock_) {
-        Row r = mock_data_[mock_index_++];
-        has_next_ = mock_index_ < mock_data_.size();
-        return r;
-    }
     Row r = current_row_;
     FetchNext();
     return r;
-#else
-    Row r = mock_data_[mock_index_++];
-    has_next_ = mock_index_ < mock_data_.size();
-    return r;
-#endif
 }
 
 void SQLiteAdapter::Close() {
-#ifdef QLE_HAVE_SQLITE3
     if (stmt_) {
         sqlite3_finalize(static_cast<sqlite3_stmt*>(stmt_));
         stmt_ = nullptr;
@@ -118,7 +89,6 @@ void SQLiteAdapter::Close() {
         sqlite3_close(static_cast<sqlite3*>(db_));
         db_ = nullptr;
     }
-#endif
     has_next_ = false;
 }
 

@@ -20,11 +20,9 @@ list(REMOVE_ITEM SRC_FILES "${CMAKE_SOURCE_DIR}/src/main.cpp")
 # Create library
 add_library(qle_core ${SRC_FILES})
 
-find_package(SQLite3)
-if(SQLite3_FOUND)
-    target_link_libraries(qle_core PUBLIC SQLite::SQLite3)
-    target_compile_definitions(qle_core PUBLIC QLE_HAVE_SQLITE3)
-endif()
+find_package(SQLite3 REQUIRED)
+target_link_libraries(qle_core PUBLIC SQLite::SQLite3)
+target_compile_definitions(qle_core PUBLIC QLE_HAVE_SQLITE3)
 
 # Main executable
 add_executable(qle src/main.cpp)
