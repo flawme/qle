@@ -19,12 +19,15 @@ The AST nodes are lightweight and strictly immutable after construction.
 - `ExpressionNode`: Represents binary operations or literal values.
 
 ## 4. Runtime (`src/runtime`)
-The Runtime executes the AST. It dynamically asks the Adapter factory for the correct data stream, iterates through the rows, evaluates the `WhereNode` conditional logic, and selects the fields defined in the `SelectNode`. It handles aggregation like `count` and sorts rows based on `OrderByNode`.
+The Runtime executes the AST. It handles filtering, evaluating inline functions (`upper`, `lower`, etc.), grouping data via the `group by` clause, computing aggregations (`sum`, `avg`), and sorting rows based on `OrderByNode`.
 
 ## 5. Adapters (`src/adapters`)
-Data extraction is entirely decoupled from the runtime. Adapters implement the `IAdapter` interface, guaranteeing `Open()`, `HasNext()`, `Next()`, and `Close()` functionality. Supported formats in V1 are CSV and JSON.
+Data extraction is entirely decoupled from the runtime. Adapters implement the `IAdapter` interface, guaranteeing `Open()`, `HasNext()`, `Next()`, and `Close()` functionality. Supported formats are:
+- **CSV**: Streams comma-separated text.
+- **JSON**: Streams JSON object arrays.
+- **SQLite**: Connects natively to `.sqlite` or `.db` databases using the SQLite C API. 
 
-## 6. Utils (`src/utils`)
-Utility helpers to enhance the end-user experience:
+## 6. Utils & Tools (`src/utils`, `src/repl`)
+- **Interactive REPL:** Provides a live shell loop (`src/repl/repl.cpp`) for ad-hoc querying.
 - **Formatter:** Handles turning the raw row data into `table`, `json`, or `csv` outputs.
 - **Suggestions:** Implements the Levenshtein distance algorithm to provide "Did you mean?" typo corrections for unknown fields.

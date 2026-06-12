@@ -25,28 +25,41 @@ select <field1, field2 | * | count>
 - Logical: `and`, `or`
 - Grouping: `(` and `)`
 
-## CLI Options
-
-The CLI supports several options to customize execution:
+## Interactive REPL Shell
+To start an interactive session, simply run QLE without any arguments:
 
 ```bash
-qle [options] "<query>"
-qle [options] run <file1.qle> [file2.qle ...]
+./qle
+```
+You will be dropped into a live `qle > ` prompt where you can execute queries and explore data interactively. Type `exit` or `quit` to leave the shell.
 
-Options:
-  --help              Show help message
-  --version           Show version information
-  --format <mode>     Set output format: table, csv, json (default: csv)
-  --time              Show execution time in milliseconds
-  --quiet             Suppress info messages (like file execution banners)
+## Basic Syntax
+
+A valid QLE query requires a `from` and a `select` clause. The `where`, `group by`, `order by`, and `limit` clauses are optional.
+
+```text
+from <source_file>
+[where <condition>]
+[group by <field>]
+select <field1, field2 | * | count | sum(field) | avg(field) | min(field) | max(field)>
+[order by <field> [asc|desc]]
+[limit <number>]
 ```
 
-### Examples
+### Select Options & Aggregations
+- **Specific fields:** `select name, email`
+- **All fields:** `select *`
+- **Aggregations:** `select count, sum(score), avg(age), min(price), max(price)`
+  *(Note: Aggregations should be used alongside a `group by` clause for bucketed data analysis).*
 
-**Run an inline query with table output and timing:**
-```bash
-./qle --format table --time "from users.csv where age > 18 order by age desc limit 5 select name, age"
-```
+### Built-In Inline Functions
+You can manipulate strings on the fly inside `select` or `where` clauses:
+- `upper(field)`: Converts text to uppercase.
+- `lower(field)`: Converts text to lowercase.
+- `concat(field1, field2)`: Joins two fields together.
+- `length(field)`: Returns the character length of the field.
+
+*Example:* `from users.csv where length(password) < 8 select upper(name), email`
 
 **Count matching rows:**
 ```bash
