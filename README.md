@@ -13,6 +13,12 @@ A lightweight, interpreted query language for querying multiple data sources usi
 - **Modular Adapters**: Currently supports `CSV`, `JSON`, and `SQLite`.
 - **Typo Suggestions**: Helpful Levenshtein distance-based suggestions when you mistype a field name.
 
+## Documentation
+
+- [Usage Guide](docs/usage.md): Learn the QLE syntax, inline functions, and CLI limits.
+- [Architecture](docs/architecture.md): Explore the engine's modular adapters and AST.
+- [Performance & Optimization](docs/performance.md): Deep dive into the zero-copy engine, memory streaming, and big-data optimization strategies.
+
 ## Build
 
 Requirements: CMake 3.14+, C++17 compiler.
