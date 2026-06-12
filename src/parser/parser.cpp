@@ -148,7 +148,12 @@ std::unique_ptr<ast::SelectNode> Parser::ParseSelect() {
 
 size_t Parser::ParseLimit() {
     Consume(lexer::TokenType::NUMBER, "Expect number after LIMIT.");
-    size_t limit = std::stoull(Previous().value);
+    size_t limit = 0;
+    try {
+        limit = std::stoull(Previous().value);
+    } catch (const std::exception&) {
+        throw errors::ParserError("Invalid number format for LIMIT.", Previous().line, Previous().col);
+    }
     if (limit == 0) {
         throw errors::ParserError("LIMIT must be a positive number.", Previous().line, Previous().col);
     }

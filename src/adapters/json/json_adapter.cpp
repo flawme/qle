@@ -46,7 +46,7 @@ void JsonAdapter::Open(const std::string& source) {
 }
 
 void JsonAdapter::SkipWhitespace() {
-    while (pos_ < content_.size() && std::isspace(content_[pos_])) {
+    while (pos_ < content_.size() && std::isspace(static_cast<unsigned char>(content_[pos_]))) {
         pos_++;
     }
 }
@@ -101,8 +101,8 @@ Row JsonAdapter::ParseObject() {
         // For MVP, we parse strings and numbers as strings
         if (content_[pos_] == '"') {
             value = ParseString();
-        } else if (std::isdigit(content_[pos_]) || content_[pos_] == '-') {
-            while (pos_ < content_.size() && (std::isdigit(content_[pos_]) || content_[pos_] == '.' || content_[pos_] == '-')) {
+        } else if (std::isdigit(static_cast<unsigned char>(content_[pos_])) || content_[pos_] == '-') {
+            while (pos_ < content_.size() && (std::isdigit(static_cast<unsigned char>(content_[pos_])) || content_[pos_] == '.' || content_[pos_] == '-')) {
                 value += content_[pos_++];
             }
         } else {

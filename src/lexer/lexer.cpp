@@ -38,7 +38,7 @@ bool Lexer::IsAtEnd() const {
 void Lexer::SkipWhitespace() {
     while (!IsAtEnd()) {
         char c = Peek();
-        if (std::isspace(c)) {
+        if (std::isspace(static_cast<unsigned char>(c))) {
             Advance();
         } else {
             break;
@@ -71,10 +71,10 @@ Token Lexer::NextToken() {
     size_t start_line = line_;
     size_t start_col = col_;
 
-    if (std::isalpha(c) || c == '_') {
+    if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') {
         return ReadIdentifierOrKeyword();
     }
-    if (std::isdigit(c)) {
+    if (std::isdigit(static_cast<unsigned char>(c))) {
         return ReadNumber();
     }
     if (c == '"' || c == '\'') {
@@ -122,14 +122,14 @@ Token Lexer::ReadIdentifierOrKeyword() {
     size_t start_col = col_;
     std::string value;
 
-    while (!IsAtEnd() && (std::isalnum(Peek()) || Peek() == '_' || Peek() == '.' || Peek() == '/')) {
+    while (!IsAtEnd() && (std::isalnum(static_cast<unsigned char>(Peek())) || Peek() == '_' || Peek() == '.' || Peek() == '/')) {
         value += Advance();
     }
 
     // Check keywords
     std::string lower_val;
     for (char c : value) {
-        lower_val += std::tolower(c);
+        lower_val += std::tolower(static_cast<unsigned char>(c));
     }
 
     if (lower_val == "from") return {TokenType::FROM, lower_val, start_line, start_col};
@@ -151,13 +151,13 @@ Token Lexer::ReadNumber() {
     size_t start_col = col_;
     std::string value;
 
-    while (!IsAtEnd() && std::isdigit(Peek())) {
+    while (!IsAtEnd() && std::isdigit(static_cast<unsigned char>(Peek()))) {
         value += Advance();
     }
     
     if (!IsAtEnd() && Peek() == '.') {
         value += Advance();
-        while (!IsAtEnd() && std::isdigit(Peek())) {
+        while (!IsAtEnd() && std::isdigit(static_cast<unsigned char>(Peek()))) {
             value += Advance();
         }
     }
