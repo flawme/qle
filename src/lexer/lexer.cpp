@@ -85,6 +85,7 @@ Token Lexer::NextToken() {
     
     switch (c) {
         case ',': return {TokenType::COMMA, ",", start_line, start_col};
+        case '*': return {TokenType::STAR, "*", start_line, start_col};
         case '(': return {TokenType::LEFT_PAREN, "(", start_line, start_col};
         case ')': return {TokenType::RIGHT_PAREN, ")", start_line, start_col};
         case '>':
@@ -134,6 +135,11 @@ Token Lexer::ReadIdentifierOrKeyword() {
     if (lower_val == "from") return {TokenType::FROM, lower_val, start_line, start_col};
     if (lower_val == "where") return {TokenType::WHERE, lower_val, start_line, start_col};
     if (lower_val == "select") return {TokenType::SELECT, lower_val, start_line, start_col};
+    if (lower_val == "limit") return {TokenType::LIMIT, lower_val, start_line, start_col};
+    if (lower_val == "order") return {TokenType::ORDER, lower_val, start_line, start_col};
+    if (lower_val == "by") return {TokenType::BY, lower_val, start_line, start_col};
+    if (lower_val == "asc") return {TokenType::ASC, lower_val, start_line, start_col};
+    if (lower_val == "desc") return {TokenType::DESC, lower_val, start_line, start_col};
     if (lower_val == "and") return {TokenType::AND, lower_val, start_line, start_col};
     if (lower_val == "or") return {TokenType::OR, lower_val, start_line, start_col};
 

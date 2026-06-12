@@ -18,12 +18,20 @@ WhereNode::WhereNode(std::unique_ptr<ExpressionNode> condition)
 SelectNode::SelectNode(std::vector<std::string> fields)
     : fields_(std::move(fields)) {}
 
+OrderByNode::OrderByNode(const std::string& field, OrderDirection direction)
+    : field_(field), direction_(direction) {}
+
 QueryNode::QueryNode(std::unique_ptr<SourceNode> source,
                      std::unique_ptr<WhereNode> where_clause,
-                     std::unique_ptr<SelectNode> select_clause)
+                     std::unique_ptr<SelectNode> select_clause,
+                     size_t limit,
+                     std::unique_ptr<OrderByNode> order_by)
     : source_(std::move(source)), 
       where_clause_(std::move(where_clause)), 
-      select_clause_(std::move(select_clause)) {}
+      select_clause_(std::move(select_clause)),
+      limit_(limit),
+      order_by_(std::move(order_by)) {}
 
 } // namespace ast
 } // namespace qle
+

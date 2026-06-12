@@ -26,6 +26,9 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
     std::unique_ptr<ast::SourceNode> source = nullptr;
     std::unique_ptr<ast::WhereNode> where_clause = nullptr;
     std::unique_ptr<ast::SelectNode> select_clause = nullptr;
+    size_t limit = 0;
+    bool has_limit = false;
+    std::unique_ptr<ast::OrderByNode> order_by = nullptr;
 
     while (!IsAtEnd()) {
         if (Match({lexer::TokenType::FROM})) {
@@ -43,6 +46,17 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
                 throw errors::ParserError("Multiple SELECT clauses found", Previous().line, Previous().col);
             }
             select_clause = ParseSelect();
+        } else if (Match({lexer::TokenType::LIMIT})) {
+            if (has_limit) {
+                throw errors::ParserError("Multiple LIMIT clauses found", Previous().line, Previous().col);
+            }
+            limit = ParseLimit();
+            has_limit = true;
+        } else if (Match({lexer::TokenType::ORDER})) {
+            if (order_by) {
+                throw errors::ParserError("Multiple ORDER BY clauses found", Previous().line, Previous().col);
+            }
+            order_by = ParseOrderBy();
         } else {
             throw errors::ParserError("Unexpected token: " + Peek().value, Peek().line, Peek().col);
         }
@@ -57,7 +71,7 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
 
     TrackNodeCreation();
     Debug::DebugLog("Parsing complete");
-    return std::make_unique<ast::QueryNode>(std::move(source), std::move(where_clause), std::move(select_clause));
+    return std::make_unique<ast::QueryNode>(std::move(source), std::move(where_clause), std::move(select_clause), limit, std::move(order_by));
 }
 
 bool Parser::IsAtEnd() const {
@@ -118,14 +132,44 @@ std::unique_ptr<ast::WhereNode> Parser::ParseWhere() {
 
 std::unique_ptr<ast::SelectNode> Parser::ParseSelect() {
     std::vector<std::string> fields;
-    
-    do {
-        Consume(lexer::TokenType::IDENTIFIER, "Expect field name in SELECT.");
-        fields.push_back(Previous().value);
-    } while (Match({lexer::TokenType::COMMA}));
+
+    if (Match({lexer::TokenType::STAR})) {
+        fields.push_back("*");
+    } else {
+        do {
+            Consume(lexer::TokenType::IDENTIFIER, "Expect field name in SELECT.");
+            fields.push_back(Previous().value);
+        } while (Match({lexer::TokenType::COMMA}));
+    }
     
     TrackNodeCreation();
     return std::make_unique<ast::SelectNode>(std::move(fields));
+}
+
+size_t Parser::ParseLimit() {
+    Consume(lexer::TokenType::NUMBER, "Expect number after LIMIT.");
+    size_t limit = std::stoull(Previous().value);
+    if (limit == 0) {
+        throw errors::ParserError("LIMIT must be a positive number.", Previous().line, Previous().col);
+    }
+    TrackNodeCreation();
+    return limit;
+}
+
+std::unique_ptr<ast::OrderByNode> Parser::ParseOrderBy() {
+    Consume(lexer::TokenType::BY, "Expect BY after ORDER.");
+    Consume(lexer::TokenType::IDENTIFIER, "Expect field name after ORDER BY.");
+    std::string field = Previous().value;
+
+    ast::OrderDirection direction = ast::OrderDirection::ASC;
+    if (Match({lexer::TokenType::ASC})) {
+        direction = ast::OrderDirection::ASC;
+    } else if (Match({lexer::TokenType::DESC})) {
+        direction = ast::OrderDirection::DESC;
+    }
+
+    TrackNodeCreation();
+    return std::make_unique<ast::OrderByNode>(field, direction);
 }
 
 std::unique_ptr<ast::ExpressionNode> Parser::ParseExpression() {

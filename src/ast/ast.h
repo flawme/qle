@@ -13,7 +13,13 @@ enum class NodeType {
     SOURCE,
     WHERE,
     SELECT,
-    EXPRESSION
+    EXPRESSION,
+    ORDER_BY
+};
+
+enum class OrderDirection {
+    ASC,
+    DESC
 };
 
 class AstNode {
@@ -74,23 +80,43 @@ private:
     std::vector<std::string> fields_;
 };
 
+class OrderByNode : public AstNode {
+public:
+    OrderByNode(const std::string& field, OrderDirection direction);
+
+    NodeType GetType() const override { return NodeType::ORDER_BY; }
+    const std::string& GetField() const { return field_; }
+    OrderDirection GetDirection() const { return direction_; }
+
+private:
+    std::string field_;
+    OrderDirection direction_;
+};
+
 class QueryNode : public AstNode {
 public:
     QueryNode(std::unique_ptr<SourceNode> source,
               std::unique_ptr<WhereNode> where_clause,
-              std::unique_ptr<SelectNode> select_clause);
+              std::unique_ptr<SelectNode> select_clause,
+              size_t limit,
+              std::unique_ptr<OrderByNode> order_by);
               
     NodeType GetType() const override { return NodeType::QUERY; }
     
     const SourceNode* GetSource() const { return source_.get(); }
     const WhereNode* GetWhere() const { return where_clause_.get(); }
     const SelectNode* GetSelect() const { return select_clause_.get(); }
+    size_t GetLimit() const { return limit_; }
+    const OrderByNode* GetOrderBy() const { return order_by_.get(); }
 
 private:
     std::unique_ptr<SourceNode> source_;
     std::unique_ptr<WhereNode> where_clause_;
     std::unique_ptr<SelectNode> select_clause_;
+    size_t limit_;
+    std::unique_ptr<OrderByNode> order_by_;
 };
 
 } // namespace ast
 } // namespace qle
+

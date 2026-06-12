@@ -11,6 +11,11 @@ std::string ToString(TokenType type) {
         case TokenType::FROM: return "FROM";
         case TokenType::WHERE: return "WHERE";
         case TokenType::SELECT: return "SELECT";
+        case TokenType::LIMIT: return "LIMIT";
+        case TokenType::ORDER: return "ORDER";
+        case TokenType::BY: return "BY";
+        case TokenType::ASC: return "ASC";
+        case TokenType::DESC: return "DESC";
         case TokenType::GREATER_THAN: return ">";
         case TokenType::LESS_THAN: return "<";
         case TokenType::EQUALS: return "==";
@@ -20,6 +25,7 @@ std::string ToString(TokenType type) {
         case TokenType::AND: return "AND";
         case TokenType::OR: return "OR";
         case TokenType::COMMA: return ",";
+        case TokenType::STAR: return "*";
         case TokenType::LEFT_PAREN: return "(";
         case TokenType::RIGHT_PAREN: return ")";
         case TokenType::END_OF_FILE: return "EOF";

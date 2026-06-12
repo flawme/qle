@@ -14,6 +14,11 @@ enum class TokenType {
     FROM,
     WHERE,
     SELECT,
+    LIMIT,
+    ORDER,
+    BY,
+    ASC,
+    DESC,
     
     // Operators
     GREATER_THAN,
@@ -27,6 +32,7 @@ enum class TokenType {
     
     // Punctuation
     COMMA,
+    STAR,
     LEFT_PAREN,
     RIGHT_PAREN,
     
