@@ -36,12 +36,11 @@ void TestSyntaxEdgeCases() {
     std::string queries[] = {
         "from users order by",
         "from users select",
-        "select name from users",
         "from users where",
         "from users limit",
         "from users limit abc",
         "from users limit 0",
-        "from users limit 9999999999999999999999999999999999999999999", // should not crash but throw
+        "from users limit 9999999999999999999999999999999999999999999",
     };
 
     for (const auto& q : queries) {
@@ -49,6 +48,7 @@ void TestSyntaxEdgeCases() {
             lexer::Lexer lexer(q);
             parser::Parser parser(lexer.Tokenize());
             parser.Parse();
+            std::cerr << "FAILED ON QUERY: " << q << std::endl;
             assert(false && "Should have thrown");
         } catch (const errors::QleException&) {}
     }

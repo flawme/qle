@@ -13,7 +13,7 @@
 
 using namespace qle;
 
-static const char* VERSION_STRING = "qle 1.0";
+static const char* VERSION_STRING = "qle v0.1.2";
 
 static const char* HELP_TEXT =
     "Usage:\n"
