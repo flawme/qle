@@ -29,6 +29,7 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
     size_t limit = 0;
     bool has_limit = false;
     std::unique_ptr<ast::OrderByNode> order_by = nullptr;
+    std::unique_ptr<ast::GroupByNode> group_by = nullptr;
 
     while (!IsAtEnd()) {
         if (Match({lexer::TokenType::FROM})) {
@@ -57,6 +58,11 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
                 throw errors::ParserError("Multiple ORDER BY clauses found", Previous().line, Previous().col);
             }
             order_by = ParseOrderBy();
+        } else if (Match({lexer::TokenType::GROUP})) {
+            if (group_by) {
+                throw errors::ParserError("Multiple GROUP BY clauses found", Previous().line, Previous().col);
+            }
+            group_by = ParseGroupBy();
         } else {
             throw errors::ParserError("Unexpected token: " + Peek().value, Peek().line, Peek().col);
         }
@@ -71,7 +77,7 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
 
     TrackNodeCreation();
     Debug::DebugLog("Parsing complete");
-    return std::make_unique<ast::QueryNode>(std::move(source), std::move(where_clause), std::move(select_clause), limit, std::move(order_by));
+    return std::make_unique<ast::QueryNode>(std::move(source), std::move(where_clause), std::move(select_clause), limit, std::move(order_by), std::move(group_by));
 }
 
 bool Parser::IsAtEnd() const {
@@ -131,19 +137,19 @@ std::unique_ptr<ast::WhereNode> Parser::ParseWhere() {
 }
 
 std::unique_ptr<ast::SelectNode> Parser::ParseSelect() {
-    std::vector<std::string> fields;
+    std::vector<std::unique_ptr<ast::ExpressionNode>> fields;
+    bool is_wildcard = false;
 
     if (Match({lexer::TokenType::STAR})) {
-        fields.push_back("*");
+        is_wildcard = true;
     } else {
         do {
-            Consume(lexer::TokenType::IDENTIFIER, "Expect field name in SELECT.");
-            fields.push_back(Previous().value);
+            fields.push_back(ParseExpression());
         } while (Match({lexer::TokenType::COMMA}));
     }
     
     TrackNodeCreation();
-    return std::make_unique<ast::SelectNode>(std::move(fields));
+    return std::make_unique<ast::SelectNode>(std::move(fields), is_wildcard);
 }
 
 size_t Parser::ParseLimit() {
@@ -175,6 +181,15 @@ std::unique_ptr<ast::OrderByNode> Parser::ParseOrderBy() {
 
     TrackNodeCreation();
     return std::make_unique<ast::OrderByNode>(field, direction);
+}
+
+std::unique_ptr<ast::GroupByNode> Parser::ParseGroupBy() {
+    Consume(lexer::TokenType::BY, "Expect BY after GROUP.");
+    Consume(lexer::TokenType::IDENTIFIER, "Expect field name after GROUP BY.");
+    std::string field = Previous().value;
+
+    TrackNodeCreation();
+    return std::make_unique<ast::GroupByNode>(field);
 }
 
 std::unique_ptr<ast::ExpressionNode> Parser::ParseExpression() {
@@ -241,7 +256,24 @@ std::unique_ptr<ast::ExpressionNode> Parser::ParseComparison() {
 
 std::unique_ptr<ast::ExpressionNode> Parser::ParsePrimary() {
     RecursionGuard guard(this);
-    if (Match({lexer::TokenType::IDENTIFIER, lexer::TokenType::NUMBER, lexer::TokenType::STRING})) {
+    if (Match({lexer::TokenType::IDENTIFIER})) {
+        lexer::Token token = Previous();
+        if (Match({lexer::TokenType::LEFT_PAREN})) {
+            std::vector<std::unique_ptr<ast::ExpressionNode>> args;
+            if (!Check(lexer::TokenType::RIGHT_PAREN)) {
+                do {
+                    args.push_back(ParseExpression());
+                } while (Match({lexer::TokenType::COMMA}));
+            }
+            Consume(lexer::TokenType::RIGHT_PAREN, "Expect ')' after arguments.");
+            TrackNodeCreation();
+            return std::make_unique<ast::ExpressionNode>(token, std::move(args));
+        }
+        TrackNodeCreation();
+        return std::make_unique<ast::ExpressionNode>(token);
+    }
+    
+    if (Match({lexer::TokenType::NUMBER, lexer::TokenType::STRING})) {
         TrackNodeCreation();
         return std::make_unique<ast::ExpressionNode>(Previous());
     }

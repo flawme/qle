@@ -14,6 +14,7 @@ std::string ToString(TokenType type) {
         case TokenType::LIMIT: return "LIMIT";
         case TokenType::ORDER: return "ORDER";
         case TokenType::BY: return "BY";
+        case TokenType::GROUP: return "GROUP";
         case TokenType::ASC: return "ASC";
         case TokenType::DESC: return "DESC";
         case TokenType::GREATER_THAN: return ">";

@@ -24,13 +24,26 @@ private:
     std::vector<std::string> ResolveWildcard(const adapters::Row& row);
     void SortRows(std::vector<adapters::Row>& rows, const ast::OrderByNode* order_by);
 
-    void ExecuteStreaming(adapters::IAdapter& adapter,
-                         std::vector<std::string>& fields, bool is_wildcard,
-                         const ast::WhereNode* where_node, size_t limit);
+    
     void ExecuteWithOrderBy(adapters::IAdapter& adapter,
-                            std::vector<std::string>& fields, bool is_wildcard,
+                            const ast::SelectNode* select_node,
                             const ast::WhereNode* where_node,
                             const ast::OrderByNode* order_by, size_t limit);
+                            
+    void ExecuteStreaming(adapters::IAdapter& adapter,
+                         const ast::SelectNode* select_node,
+                         const ast::WhereNode* where_node, size_t limit);
+                         
+    void ExecuteWithGroupBy(adapters::IAdapter& adapter,
+                            const ast::SelectNode* select_node,
+                            const ast::WhereNode* where_node,
+                            const ast::GroupByNode* group_by,
+                            const ast::OrderByNode* order_by, size_t limit);
+
+    std::string FormatExpression(const ast::ExpressionNode* expr);
+    std::string EvaluateAggregate(const ast::ExpressionNode* expr, const std::vector<adapters::Row>& bucket);
+    bool HasAggregate(const ast::SelectNode* select_node);
+    bool CheckIfContainsAggregate(const ast::ExpressionNode* expr);
 
     size_t rows_processed_;
     utils::OutputFormat format_;

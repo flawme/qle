@@ -44,6 +44,7 @@ private:
     std::unique_ptr<ast::SelectNode> ParseSelect();
     size_t ParseLimit();
     std::unique_ptr<ast::OrderByNode> ParseOrderBy();
+    std::unique_ptr<ast::GroupByNode> ParseGroupBy();
     
     std::unique_ptr<ast::ExpressionNode> ParseExpression();
     std::unique_ptr<ast::ExpressionNode> ParseOr();

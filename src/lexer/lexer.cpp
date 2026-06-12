@@ -138,6 +138,7 @@ Token Lexer::ReadIdentifierOrKeyword() {
     if (lower_val == "limit") return {TokenType::LIMIT, lower_val, start_line, start_col};
     if (lower_val == "order") return {TokenType::ORDER, lower_val, start_line, start_col};
     if (lower_val == "by") return {TokenType::BY, lower_val, start_line, start_col};
+    if (lower_val == "group") return {TokenType::GROUP, lower_val, start_line, start_col};
     if (lower_val == "asc") return {TokenType::ASC, lower_val, start_line, start_col};
     if (lower_val == "desc") return {TokenType::DESC, lower_val, start_line, start_col};
     if (lower_val == "and") return {TokenType::AND, lower_val, start_line, start_col};

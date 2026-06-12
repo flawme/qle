@@ -14,7 +14,8 @@ enum class NodeType {
     WHERE,
     SELECT,
     EXPRESSION,
-    ORDER_BY
+    ORDER_BY,
+    GROUP_BY
 };
 
 enum class OrderDirection {
@@ -33,18 +34,23 @@ class ExpressionNode : public AstNode {
 public:
     ExpressionNode(lexer::Token op, std::unique_ptr<ExpressionNode> left, std::unique_ptr<ExpressionNode> right);
     explicit ExpressionNode(lexer::Token literal); // identifier, string, number
+    ExpressionNode(lexer::Token function_name, std::vector<std::unique_ptr<ExpressionNode>> args);
     
     NodeType GetType() const override { return NodeType::EXPRESSION; }
     
     const lexer::Token& GetToken() const { return token_; }
     const ExpressionNode* GetLeft() const { return left_.get(); }
     const ExpressionNode* GetRight() const { return right_.get(); }
-    bool IsLiteral() const { return left_ == nullptr && right_ == nullptr; }
+    bool IsLiteral() const { return left_ == nullptr && right_ == nullptr && args_.empty() && !is_function_call_; }
+    bool IsFunctionCall() const { return is_function_call_; }
+    const std::vector<std::unique_ptr<ExpressionNode>>& GetArgs() const { return args_; }
 
 private:
     lexer::Token token_;
     std::unique_ptr<ExpressionNode> left_;
     std::unique_ptr<ExpressionNode> right_;
+    std::vector<std::unique_ptr<ExpressionNode>> args_;
+    bool is_function_call_ = false;
 };
 
 class SourceNode : public AstNode {
@@ -71,13 +77,26 @@ private:
 
 class SelectNode : public AstNode {
 public:
-    explicit SelectNode(std::vector<std::string> fields);
+    explicit SelectNode(std::vector<std::unique_ptr<ExpressionNode>> fields, bool is_wildcard = false);
     
     NodeType GetType() const override { return NodeType::SELECT; }
-    const std::vector<std::string>& GetFields() const { return fields_; }
+    const std::vector<std::unique_ptr<ExpressionNode>>& GetFields() const { return fields_; }
+    bool IsWildcard() const { return is_wildcard_; }
 
 private:
-    std::vector<std::string> fields_;
+    std::vector<std::unique_ptr<ExpressionNode>> fields_;
+    bool is_wildcard_ = false;
+};
+
+class GroupByNode : public AstNode {
+public:
+    explicit GroupByNode(const std::string& field);
+
+    NodeType GetType() const override { return NodeType::GROUP_BY; }
+    const std::string& GetField() const { return field_; }
+
+private:
+    std::string field_;
 };
 
 class OrderByNode : public AstNode {
@@ -99,7 +118,8 @@ public:
               std::unique_ptr<WhereNode> where_clause,
               std::unique_ptr<SelectNode> select_clause,
               size_t limit,
-              std::unique_ptr<OrderByNode> order_by);
+              std::unique_ptr<OrderByNode> order_by,
+              std::unique_ptr<GroupByNode> group_by = nullptr);
               
     NodeType GetType() const override { return NodeType::QUERY; }
     
@@ -108,6 +128,7 @@ public:
     const SelectNode* GetSelect() const { return select_clause_.get(); }
     size_t GetLimit() const { return limit_; }
     const OrderByNode* GetOrderBy() const { return order_by_.get(); }
+    const GroupByNode* GetGroupBy() const { return group_by_.get(); }
 
 private:
     std::unique_ptr<SourceNode> source_;
@@ -115,6 +136,7 @@ private:
     std::unique_ptr<SelectNode> select_clause_;
     size_t limit_;
     std::unique_ptr<OrderByNode> order_by_;
+    std::unique_ptr<GroupByNode> group_by_;
 };
 
 } // namespace ast

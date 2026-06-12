@@ -1,0 +1,5 @@
+id,name,role,amount
+1,alice,ADMIN,100
+2,bob,user,50
+3,charlie,user,20
+4,dave,ADMIN,200

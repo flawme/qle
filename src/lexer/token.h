@@ -17,6 +17,7 @@ enum class TokenType {
     LIMIT,
     ORDER,
     BY,
+    GROUP,
     ASC,
     DESC,
     
