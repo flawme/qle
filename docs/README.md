@@ -14,3 +14,5 @@ QLE is a lightweight, interpreted query language designed to allow developers to
    - Learn how to write QLE queries and execute them from the CLI.
 4. [Development & Adapters](development.md)
    - Instructions on building the project and extending it with new data source adapters.
+5. [Performance & Optimization](performance.md)
+   - Deep dive into the zero-copy parsing engine, memory streaming, and linear mapping optimizations.
