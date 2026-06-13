@@ -13,6 +13,7 @@ QLE dynamically enforces the following caps at runtime:
 - **Maximum Rows Processed (1,000,000)**: Protects the system from unbounded loops during processing.
 - **Maximum String Length (8,192 characters)**: Protects against runaway string allocations.
 - **Maximum Recursion Depth (128)**: A `RecursionGuard` inside the Parser prevents C++ stack overflow vulnerabilities caused by heavily nested parentheses.
+- **Strict Hash-Join Caps**: The `std::unordered_multimap` used for `JOIN` logic precisely estimates string capacities and violently throws memory cap exceptions if overloaded.
 
 ## Exception Safety
 

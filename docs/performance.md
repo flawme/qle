@@ -25,6 +25,7 @@ QLE only buffers data into RAM when the query requires full dataset context befo
 1. **`order by`:** QLE must load all matching rows into memory to sort them.
 2. **`group by`:** QLE must build a hashmap of all rows to aggregate buckets.
 3. **`--format table`:** QLE buffers the output to calculate the maximum width of each column for perfectly aligned borders.
+4. **Hash Joins:** QLE builds an $O(1)$ memory map of the secondary data source to execute cross-file `join` queries seamlessly without disk-thrashing.
 
 ## O(1) Lookups & Cache Locality
 

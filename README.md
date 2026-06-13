@@ -10,7 +10,8 @@ A lightweight, interpreted query language for querying multiple data sources usi
 - **Cross-Platform SQLite**: Natively query `.sqlite` files. The SQLite engine is bundled directly into the binary!
 - **Data Transformations**: Perform inline string manipulation using `upper()`, `lower()`, `concat()`, etc.
 - **Aggregations**: Bucket your data using `GROUP BY` and compute `sum`, `avg`, `min`, `max`.
-- **Modular Adapters**: Currently supports `CSV`, `JSON`, and `SQLite`.
+- **Multi-File Joins**: Perform blazing-fast cross-file queries using the $O(1)$ nested Hash Join engine.
+- **Modular Adapters**: Currently supports `CSV`, `JSON`, `SQLite`, and `YAML`.
 - **Typo Suggestions**: Helpful Levenshtein distance-based suggestions when you mistype a field name.
 
 ## Documentation

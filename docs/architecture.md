@@ -15,17 +15,19 @@ The Parser takes the token stream and constructs an Abstract Syntax Tree (AST). 
 
 ## 3. Abstract Syntax Tree (`src/ast`)
 The AST nodes are lightweight and strictly immutable after construction.
-- `QueryNode`: The root node containing the data source, condition, and selected fields.
+- `QueryNode`: The root node containing the data source, condition, and selected fields. It optionally holds a `JoinNode`.
+- `JoinNode`: Defines a secondary cross-file data source and the boolean ON condition expression.
 - `ExpressionNode`: Represents binary operations or literal values.
 
 ## 4. Runtime (`src/runtime`)
-The Runtime executes the AST. It handles filtering, evaluating inline functions (`upper`, `lower`, etc.), grouping data via the `group by` clause, computing aggregations (`sum`, `avg`), and sorting rows based on `OrderByNode`.
+The Runtime executes the AST. It handles filtering, evaluating inline functions (`upper`, `abs`, etc.), grouping data via the `group by` clause, sorting rows based on `OrderByNode`, and performing multi-file hash joins.
 
 ## 5. Adapters (`src/adapters`)
 Data extraction is entirely decoupled from the runtime. Adapters implement the `IAdapter` interface, guaranteeing `Open()`, `HasNext()`, `Next()`, and `Close()` functionality. Supported formats are:
 - **CSV**: Streams comma-separated text.
 - **JSON**: Streams JSON object arrays.
 - **SQLite**: Connects natively to `.sqlite` or `.db` databases using the SQLite C API. 
+- **YAML**: Recursively streams YAML flat objects dynamically.
 
 ## 6. Utils & Tools (`src/utils`, `src/repl`)
 - **Interactive REPL:** Provides a live shell loop (`src/repl/repl.cpp`) for ad-hoc querying.
