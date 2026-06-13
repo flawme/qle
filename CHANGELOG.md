@@ -1,5 +1,14 @@
 # QLE Changelog
 
+## [v0.1.6] - 2026-06-13
+
+### Changed
+- **Hash Join Optimization**: Completely replaced the brutal $O(N \times M)$ nested-loop `JOIN` logic with a blazingly fast $O(1)$ Hash Join engine. The engine loads the secondary file into an `std::unordered_multimap` to execute multi-file merges instantly.
+- **Zero-Copy Lexer**: Tokenizer parsing loops (`ReadString`, `ReadNumber`, etc.) have been upgraded to slice `.substr()` natively from the source string, removing thousands of unnecessary reallocation copies.
+
+### Fixed
+- **Hash Join Memory Vulnerability**: Fixed a massive vulnerability where expanding the memory buffer during a Hash Join bypassed the configured `max_memory_usage` cap. It now precisely estimates string capacity overhead and immediately throws `errors::SecurityError` if memory caps are blown.
+- **Lexer Out-of-Bounds Exceptions**: Closed several bounds checking loopholes for weird file-endings (`\0`, dangling `.` inside floats), preventing segfaults.
 ## [v0.1.5] - 2026-06-13
 
 ### Added

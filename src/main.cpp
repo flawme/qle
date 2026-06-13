@@ -64,7 +64,7 @@ CliOptions ParseFlags(int argc, char** argv) {
             std::cout << HELP_TEXT;
             std::exit(0);
         } else if (arg == "--version") {
-            std::cout << "qle 0.1.5" << std::endl;
+            std::cout << "qle 0.1.6" << std::endl;
             std::exit(0);
         }
         if (arg == "--time") {
