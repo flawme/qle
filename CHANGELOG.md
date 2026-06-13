@@ -1,5 +1,15 @@
 # QLE Changelog
 
+## [v0.1.5] - 2026-06-13
+
+### Added
+- **YAML Adapter**: Natively parse `.yaml` and `.yml` files on the fly with zero external dependencies.
+- **JOIN Engine**: Added a fast, memory-safe nested loop `JOIN` engine allowing queries across multiple sources (e.g. `join <source> on <condition>`).
+- **Mathematical Functions**: Added `abs()` and `round()` to the inline expression evaluator.
+
+### Fixed
+- **Join Limit Bypass**: Fixed a critical security vulnerability where Cartesian products inside a JOIN query could bypass the maximum rows processed limit and timeout bounds.
+- **Math Exceptions**: Prevented `abs()` and `round()` from silently swallowing conversion exceptions.
 ## [v0.1.4] - 2026-06-12
 
 ### Added

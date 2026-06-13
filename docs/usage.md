@@ -18,6 +18,7 @@ A valid QLE query requires a `from` and a `select` clause. The `where`, `group b
 
 ```text
 from <source_file>
+[join <source_file2> on <condition>]
 [where <condition>]
 [group by <field>]
 select <field1, field2 | * | count | sum(field) | avg(field) | min(field) | max(field)>
@@ -32,13 +33,15 @@ select <field1, field2 | * | count | sum(field) | avg(field) | min(field) | max(
   *(Note: Aggregations should be used alongside a `group by` clause for bucketed data analysis).*
 
 ### Built-In Inline Functions
-You can manipulate strings on the fly inside `select` or `where` clauses:
+You can manipulate strings and numbers on the fly inside `select` or `where` clauses:
 - `upper(field)`: Converts text to uppercase.
 - `lower(field)`: Converts text to lowercase.
 - `concat(field1, field2)`: Joins two fields together.
 - `length(field)`: Returns the character length of the field.
+- `abs(field)`: Returns the absolute mathematical value.
+- `round(field)`: Rounds a float to the nearest integer.
 
-*Example:* `from users.csv where length(password) < 8 select upper(name), email`
+*Example:* `from users.csv join orders.csv on id == user_id where length(password) < 8 select upper(name), round(price)`
 
 **Count matching rows:**
 ```bash
