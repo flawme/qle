@@ -27,13 +27,19 @@ GroupByNode::GroupByNode(const std::string& field)
 OrderByNode::OrderByNode(const std::string& field, OrderDirection direction)
     : field_(field), direction_(direction) {}
 
+
+JoinNode::JoinNode(const std::string& source, std::unique_ptr<ExpressionNode> condition)
+    : source_(source), condition_(std::move(condition)) {}
+
 QueryNode::QueryNode(std::unique_ptr<SourceNode> source,
+                     std::unique_ptr<JoinNode> join_clause,
                      std::unique_ptr<WhereNode> where_clause,
                      std::unique_ptr<SelectNode> select_clause,
                      size_t limit,
                      std::unique_ptr<OrderByNode> order_by,
                      std::unique_ptr<GroupByNode> group_by)
     : source_(std::move(source)), 
+      join_clause_(std::move(join_clause)), 
       where_clause_(std::move(where_clause)), 
       select_clause_(std::move(select_clause)),
       limit_(limit),

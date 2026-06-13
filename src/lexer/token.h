@@ -20,6 +20,8 @@ enum class TokenType {
     GROUP,
     ASC,
     DESC,
+    JOIN,
+    ON,
     
     // Operators
     GREATER_THAN,
