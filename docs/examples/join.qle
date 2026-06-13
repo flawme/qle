@@ -1,0 +1,6 @@
+from users.csv
+join orders.csv on id == user_id
+where length(item) > 0
+select name, item, price
+order by price desc
+limit 10

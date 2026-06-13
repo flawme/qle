@@ -1,0 +1,3 @@
+from raw_input.yaml
+where length(username) > 4
+select concat(upper(first_name), concat(" ", upper(last_name))), lower(email)

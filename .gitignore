@@ -1,6 +1,7 @@
 build/
 output.log
 *.qle
+!docs/examples/*.qle
 large_users.csv
 generate_data.py
 .DS_Store

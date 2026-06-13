@@ -1,0 +1,3 @@
+from global_sales.sqlite
+group by region
+select region, count, sum(sales_volume), avg(price), min(price), max(price)

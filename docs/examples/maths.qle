@@ -1,0 +1,4 @@
+from financial_data.json
+where abs(profit_margin) > 5.0
+select id, round(revenue), abs(profit_margin)
+order by revenue desc
