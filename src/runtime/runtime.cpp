@@ -327,6 +327,7 @@ void Runtime::ExecuteStreaming(adapters::IAdapter& adapter,
     std::vector<adapters::Row> joined_rows_fallback;
     bool is_simple_equi_join = false;
     std::string primary_key_name;
+    size_t estimated_memory = 0;
 
     if (join_node) {
         auto joined_adapter = GetAdapterForSource(join_node->GetSource());
@@ -371,8 +372,27 @@ void Runtime::ExecuteStreaming(adapters::IAdapter& adapter,
                 if (it != joined_row.end()) {
                     key_val = it->second;
                 }
+                
+                size_t row_memory = key_val.capacity() + 64;
+                for (const auto& kv : joined_row) {
+                    row_memory += kv.first.capacity() + kv.second.capacity() + 64;
+                }
+                estimated_memory += row_memory;
+                if (estimated_memory > security::Limits::Get().max_memory_usage) {
+                    throw errors::SecurityError("Maximum memory limit exceeded during join.");
+                }
+                
                 join_hash_map.insert({key_val, std::move(joined_row)});
             } else {
+                size_t row_memory = 64;
+                for (const auto& kv : joined_row) {
+                    row_memory += kv.first.capacity() + kv.second.capacity() + 64;
+                }
+                estimated_memory += row_memory;
+                if (estimated_memory > security::Limits::Get().max_memory_usage) {
+                    throw errors::SecurityError("Maximum memory limit exceeded during join.");
+                }
+                
                 joined_rows_fallback.push_back(std::move(joined_row));
             }
         }

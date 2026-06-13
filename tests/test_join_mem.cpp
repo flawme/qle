@@ -12,7 +12,7 @@ using namespace qle;
 int main() {
     std::ofstream right_table("right_huge.csv");
     right_table << "id,value\n";
-    std::string large_val(20000, 'A');
+    std::string large_val(10000, 'A');
     for (int i = 0; i < 50000; i++) {
         right_table << i << "," << large_val << "\n";
     }
@@ -23,9 +23,7 @@ int main() {
     left_table.close();
 
     size_t old_limit = security::Limits::Get().max_rows_processed;
-    security::Limits::Get().max_rows_processed = 1000000; // Allow many rows
-    size_t old_size = security::Limits::Get().max_file_size;
-    security::Limits::Get().max_file_size = 1000 * 1024 * 1024; // Allow large file
+    security::Limits::Get().max_rows_processed = 1000000; // Large row limit to allow the memory issue to trigger
     
     try {
         std::string query = "from left_small.csv join right_huge.csv on id == id select id, value";
@@ -42,6 +40,5 @@ int main() {
         return 1;
     }
     security::Limits::Get().max_rows_processed = old_limit;
-    security::Limits::Get().max_file_size = old_size;
     return 0;
 }
