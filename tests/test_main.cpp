@@ -109,38 +109,38 @@ void TestAdversarialParsing() {
 void TestMalformedDataSources() {
     std::cout << "Running Malformed Data Sources Tests..." << std::endl;
     // Broken CSV quotes, missing JSON braces
-    std::ofstream bad_csv("tests/bad_quotes.csv");
+    std::ofstream bad_csv("bad_quotes.csv");
     bad_csv << "id,name\n1,\"unclosed quote\n2,bob\n";
     bad_csv.close();
 
-    std::ofstream bad_json("tests/bad_braces.json");
+    std::ofstream bad_json("bad_braces.json");
     bad_json << "{ \"id\": 1, \"name\": \"alice\" "; // Missing closing brace
     bad_json.close();
 
     try {
         runtime::Runtime rt;
-        lexer::Lexer lexer("from tests/bad_quotes.csv select *");
+        lexer::Lexer lexer("from bad_quotes.csv select *");
         parser::Parser parser(lexer.Tokenize());
         rt.Execute(parser.Parse().get());
     } catch (const errors::QleException&) {}
 
     try {
         runtime::Runtime rt;
-        lexer::Lexer lexer("from tests/bad_braces.json select *");
+        lexer::Lexer lexer("from bad_braces.json select *");
         parser::Parser parser(lexer.Tokenize());
         rt.Execute(parser.Parse().get());
     } catch (const errors::QleException&) {}
 
     try {
         runtime::Runtime rt;
-        lexer::Lexer lexer("from tests/malformed.json select *");
+        lexer::Lexer lexer("from malformed.json select *");
         parser::Parser parser(lexer.Tokenize());
         rt.Execute(parser.Parse().get());
     } catch (const errors::QleException&) {}
 
     try {
         runtime::Runtime rt;
-        lexer::Lexer lexer("from tests/empty.json select *");
+        lexer::Lexer lexer("from empty.json select *");
         parser::Parser parser(lexer.Tokenize());
         rt.Execute(parser.Parse().get());
     } catch (const errors::QleException&) {}
@@ -148,7 +148,7 @@ void TestMalformedDataSources() {
 
 void TestBoundaryConditions() {
     std::cout << "Running Boundary Conditions Tests..." << std::endl;
-    std::string query = "from tests/malformed.csv where name > 5 select id";
+    std::string query = "from malformed.csv where name > 5 select id";
     try {
         runtime::Runtime rt;
         lexer::Lexer lexer(query);
@@ -163,10 +163,10 @@ void TestBoundaryConditions() {
 
     // Type coercion (string vs float), Arithmetic overflow
     std::string queries[] = {
-        "from tests/empty.json where a == \"string\" > 10 select a",
-        "from tests/empty.json select 9999999999999999999999999999999999999999",
+        "from empty.json where a == \"string\" > 10 select a",
+        "from empty.json select 9999999999999999999999999999999999999999",
         "from ../../../etc/passwd select *", // File path manipulation
-        "from tests/empty.json select limit 5" // Unexpected grammar combinations
+        "from empty.json select limit 5" // Unexpected grammar combinations
     };
     for (const auto& q : queries) {
         try {
@@ -205,10 +205,10 @@ int main() {
 void TestAggregationsAndGroupBy() {
     std::cout << "Running Aggregations & Group By Tests..." << std::endl;
     std::string queries[] = {
-        "from tests/empty.json select sum(id) group by id",
-        "from tests/empty.json select min(id)",
-        "from tests/empty.json select avg(id)",
-        "from tests/empty.json select count(id) group by non_existent"
+        "from empty.json select sum(id) group by id",
+        "from empty.json select min(id)",
+        "from empty.json select avg(id)",
+        "from empty.json select count(id) group by non_existent"
     };
     for (const auto& q : queries) {
         try {
@@ -222,12 +222,20 @@ void TestAggregationsAndGroupBy() {
 
 void TestInlineFunctions() {
     std::cout << "Running Inline Functions Tests..." << std::endl;
+    
+    std::ofstream tmp("math_test.csv");
+    tmp << "id,val\n1,10.5\n2,-5.2\n3,inf\n4,nan\n5,1e1000\n6,not_a_number\n";
+    tmp.close();
+
     std::string queries[] = {
-        "from test.csv select upper()",
-        "from test.csv select lower(\"abc\", \"def\")",
-        "from test.csv select length()",
-        "from test.csv select upper(\"\xFF\xFF\")",
-        "from test.csv select non_existent_func(1)"
+        "from math_test.csv select upper()",
+        "from math_test.csv select lower(\"abc\", \"def\")",
+        "from math_test.csv select length()",
+        "from math_test.csv select upper(\"\xFF\xFF\")",
+        "from math_test.csv select non_existent_func(1)",
+        "from math_test.csv select abs(val)",
+        "from math_test.csv select round(val)",
+        "from math_test.csv select abs(\"extremely_long_string_that_is_not_a_number_at_all\")"
     };
     for (const auto& q : queries) {
         try {
@@ -282,9 +290,9 @@ void TestCliLimits() {
     }
     assert(out1.find("Command line parsing error") != std::string::npos || out1.find("Error") != std::string::npos);
 
-    std::string out2 = ExecCmd("./qle --max-file-size 1 tests/empty.json 2>&1");
+    std::string out2 = ExecCmd("./qle --max-file-size 1 empty.json 2>&1");
     if (out2.empty() || out2.find("not found") != std::string::npos || out2.find("No such file") != std::string::npos) {
-        out2 = ExecCmd("../qle --max-file-size 1 tests/empty.json 2>&1");
+        out2 = ExecCmd("../qle --max-file-size 1 empty.json 2>&1");
     }
     assert(out2.find("exceeds maximum allowed size") != std::string::npos || out2.find("Error") != std::string::npos);
 }
@@ -333,14 +341,7 @@ void TestTimeoutLimit() {
     security::Limits::Get().max_execution_time_ms = old_timeout;
     assert(caught && "Hanging or slow query should throw SecurityError on timeout");
 }
-#include "lexer/lexer.h"
-#include "parser/parser.h"
-#include "runtime/runtime.h"
-#include "errors/errors.h"
-#include <iostream>
-#include <cassert>
 
-using namespace qle;
 
 void TestYamlAdapter() {
     std::cout << "Running Yaml Adapter Tests..." << std::endl;
@@ -354,45 +355,85 @@ void TestYamlAdapter() {
     auto query = parser.Parse();
     
     runtime::Runtime runtime;
-    // Redirect output? Actually we just run it and see if it crashes.
-    // Or we could verify rows.
     runtime.Execute(query.get());
+    
+    // Extreme Yaml Tests
+    std::ofstream malformed("malformed.yaml");
+    malformed << "- id: 1\n  name: [\n- id: 2";
+    malformed.close();
+    
+    try {
+        lexer::Lexer l("from malformed.yaml select *");
+        parser::Parser p(l.Tokenize());
+        runtime::Runtime rt;
+        rt.Execute(p.Parse().get());
+    } catch (const errors::QleException&) {}
+
+    // Limits in Yaml
+    std::ofstream big_yaml("big.yaml");
+    for(int i=0; i<50000; i++) big_yaml << "- a: 1\n";
+    big_yaml.close();
+    
+    size_t old_size = security::Limits::Get().max_file_size;
+    security::Limits::Get().max_file_size = 100;
+    try {
+        lexer::Lexer l("from big.yaml select *");
+        parser::Parser p(l.Tokenize());
+        runtime::Runtime rt;
+        rt.Execute(p.Parse().get());
+        assert(false && "Should have thrown file size limit");
+    } catch (const errors::SecurityError&) {}
+    security::Limits::Get().max_file_size = old_size;
 }
 
 void TestJoin() {
     std::cout << "Running Join Tests..." << std::endl;
-    // create users.csv
-    FILE* fu = fopen("../tests/users.csv", "w");
-    if (!fu) fu = fopen("tests/users.csv", "w");
-    if (fu) {
-        fprintf(fu, "id,name\n1,Alice\n2,Bob\n3,Charlie\n");
-        fclose(fu);
-    }
+    std::ofstream fu("users.csv");
+    fu << "id,name\n1,Alice\n2,Bob\n3,Charlie\n";
+    fu.close();
     
-    // create orders.csv
-    FILE* fo = fopen("../tests/orders.csv", "w");
-    if (!fo) fo = fopen("tests/orders.csv", "w");
-    if (fo) {
-        fprintf(fo, "order_id,user_id,item\n101,1,Apple\n102,1,Banana\n103,2,Carrot\n104,4,Date\n");
-        fclose(fo);
-    }
+    std::ofstream fo("orders.csv");
+    fo << "order_id,user_id,item\n101,1,Apple\n102,1,Banana\n103,2,Carrot\n104,4,Date\n";
+    fo.close();
     
     try {
-        std::string query = "from ../tests/users.csv join ../tests/orders.csv on id == user_id select name, item";
+        std::string query = "from users.csv join orders.csv on id == user_id select name, item";
         qle::lexer::Lexer lexer(query);
         qle::parser::Parser parser(lexer.Tokenize());
         qle::runtime::Runtime rt;
         rt.Execute(parser.Parse().get());
     } catch (const std::exception& e) {
-        std::cerr << "Join test failed (../tests/): " << e.what() << std::endl;
-        try {
-            std::string query = "from tests/users.csv join tests/orders.csv on id == user_id select name, item";
-            qle::lexer::Lexer lexer(query);
-            qle::parser::Parser parser(lexer.Tokenize());
-            qle::runtime::Runtime rt;
-            rt.Execute(parser.Parse().get());
-        } catch (const std::exception& e) {
-            std::cerr << "Join test failed (tests/): " << e.what() << std::endl;
-        }
+        std::cerr << "Join test failed: " << e.what() << std::endl;
     }
+    
+    // Edge case: missing keys, invalid conditions
+    try {
+        std::string query = "from users.csv join orders.csv on id == missing_key select name";
+        qle::lexer::Lexer lexer(query);
+        qle::parser::Parser parser(lexer.Tokenize());
+        qle::runtime::Runtime rt;
+        rt.Execute(parser.Parse().get());
+        assert(false && "Should have thrown for missing key");
+    } catch (const errors::QleException&) {}
+
+    // Security: Cartesian product memory/time bypass
+    size_t old_limit = security::Limits::Get().max_rows_processed;
+    security::Limits::Get().max_rows_processed = 100;
+    
+    std::ofstream t1("t1.csv"); t1 << "id\n1\n2\n"; t1.close();
+    std::ofstream t2("t2.csv"); t2 << "id\n";
+    for(int i=0; i<1000; i++) t2 << i << "\n";
+    t2.close();
+    
+    try {
+        std::string query = "from t1.csv join t2.csv on id == id select id";
+        qle::lexer::Lexer lexer(query);
+        qle::parser::Parser parser(lexer.Tokenize());
+        qle::runtime::Runtime rt;
+        rt.Execute(parser.Parse().get());
+        assert(false && "Join should have respected max rows processed");
+    } catch (const errors::SecurityError&) {}
+    security::Limits::Get().max_rows_processed = old_limit;
 }
+
+// Ensure TestInlineFunctions has the extreme math functions

@@ -190,11 +190,11 @@ std::string Runtime::EvaluateAggregate(const ast::ExpressionNode* expr, const st
             } else if (func_name == "abs") {
                 if (expr->GetArgs().size() != 1) throw errors::RuntimeError("abs() requires 1 argument", t.line, t.col);
                 std::string val = EvaluateAggregate(expr->GetArgs()[0].get(), bucket);
-                try { return std::to_string(std::abs(std::stod(val))); } catch(...) { return "0"; }
+                try { return std::to_string(std::abs(std::stod(val))); } catch(...) { throw errors::RuntimeError("Invalid argument for abs(): " + val, t.line, t.col); }
             } else if (func_name == "round") {
                 if (expr->GetArgs().size() != 1) throw errors::RuntimeError("round() requires 1 argument", t.line, t.col);
                 std::string val = EvaluateAggregate(expr->GetArgs()[0].get(), bucket);
-                try { return std::to_string(std::round(std::stod(val))); } catch(...) { return "0"; }
+                try { return std::to_string(std::round(std::stod(val))); } catch(...) { throw errors::RuntimeError("Invalid argument for round(): " + val, t.line, t.col); }
             }
             throw errors::RuntimeError("Unsupported function in aggregate context", t.line, t.col);
         }
@@ -334,7 +334,13 @@ void Runtime::ExecuteStreaming(adapters::IAdapter& adapter,
             auto joined_adapter = GetAdapterForSource(join_node->GetSource());
             joined_adapter->Open(join_node->GetSource());
             while (joined_adapter->HasNext()) {
+                if (rows_processed_ >= security::Limits::Get().max_rows_processed) {
+                    throw errors::SecurityError("Maximum row limit exceeded.");
+                }
                 adapters::Row joined_row = joined_adapter->Next();
+                rows_processed_++;
+                if (rows_processed_ % 10000 == 0) CheckTimeout();
+                
                 adapters::Row row = primary_row;
                 for (const auto& kv : joined_row) {
                     row[kv.first] = kv.second;
@@ -567,11 +573,11 @@ std::string Runtime::EvaluateExpression(const ast::ExpressionNode* expr,
         } else if (func_name == "abs") {
             if (expr->GetArgs().size() != 1) throw errors::RuntimeError("abs() requires 1 argument", t.line, t.col);
             std::string val = EvaluateExpression(expr->GetArgs()[0].get(), row);
-            try { return std::to_string(std::abs(std::stod(val))); } catch(...) { return "0"; }
+            try { return std::to_string(std::abs(std::stod(val))); } catch(...) { throw errors::RuntimeError("Invalid argument for abs(): " + val, t.line, t.col); }
         } else if (func_name == "round") {
             if (expr->GetArgs().size() != 1) throw errors::RuntimeError("round() requires 1 argument", t.line, t.col);
             std::string val = EvaluateExpression(expr->GetArgs()[0].get(), row);
-            try { return std::to_string(std::round(std::stod(val))); } catch(...) { return "0"; }
+            try { return std::to_string(std::round(std::stod(val))); } catch(...) { throw errors::RuntimeError("Invalid argument for round(): " + val, t.line, t.col); }
         }
         
         // Aggregate function used outside aggregate context, just return an empty string or evaluate the inner part?
