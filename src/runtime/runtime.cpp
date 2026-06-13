@@ -4,6 +4,7 @@
 #include "runtime/runtime.h"
 #include "adapters/csv/csv_adapter.h"
 #include "adapters/json/json_adapter.h"
+#include "adapters/yaml/yaml_adapter.h"
 #include "errors/errors.h"
 #include "security/limits.h"
 #include "logger/logger.h"
@@ -416,6 +417,10 @@ std::unique_ptr<adapters::IAdapter> Runtime::GetAdapterForSource(
     if (source.size() > 4 &&
         source.substr(source.size() - 4) == ".csv") {
         return std::make_unique<adapters::csv::CsvAdapter>();
+    }
+    if ((source.size() > 5 && source.substr(source.size() - 5) == ".yaml") ||
+        (source.size() > 4 && source.substr(source.size() - 4) == ".yml")) {
+        return std::make_unique<adapters::yaml::YamlAdapter>();
     }
     if (source.size() > 5 &&
         source.substr(source.size() - 5) == ".json") {

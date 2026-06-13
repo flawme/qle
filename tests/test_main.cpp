@@ -21,6 +21,8 @@ void TestCliLimits();
 void TestMaxRowsLimit();
 void TestTimeoutLimit();
 
+void TestYamlAdapter();
+
 void TestLexer() {
     std::cout << "Running Lexer Tests..." << std::endl;
     lexer::Lexer lexer("from users where age > 18 select name");
@@ -178,6 +180,7 @@ void TestBoundaryConditions() {
 int main() {
     Debug::Enable(false); 
     TestLexer();
+    TestYamlAdapter();
     TestParser();
     TestSecurity();
     TestRecursionDepth();
@@ -186,6 +189,7 @@ int main() {
     TestMalformedDataSources();
     TestBoundaryConditions();
     TestAggregationsAndGroupBy();
+    TestYamlAdapter();
     TestInlineFunctions();
     TestSqliteAdapter();
     TestReplEdgeCases();
@@ -326,4 +330,25 @@ void TestTimeoutLimit() {
     }
     security::Limits::Get().max_execution_time_ms = old_timeout;
     assert(caught && "Hanging or slow query should throw SecurityError on timeout");
+}
+#include "lexer/lexer.h"
+#include "parser/parser.h"
+#include "runtime/runtime.h"
+#include "errors/errors.h"
+#include <iostream>
+#include <cassert>
+
+using namespace qle;
+
+void TestYamlAdapter() {
+    std::cout << "Running Yaml Adapter Tests..." << std::endl;
+    lexer::Lexer lexer("from tests/test.yaml select id, name, age");
+    auto tokens = lexer.Tokenize();
+    parser::Parser parser(tokens);
+    auto query = parser.Parse();
+    
+    runtime::Runtime runtime;
+    // Redirect output? Actually we just run it and see if it crashes.
+    // Or we could verify rows.
+    runtime.Execute(query.get());
 }
