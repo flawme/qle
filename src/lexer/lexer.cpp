@@ -120,11 +120,12 @@ Token Lexer::NextToken() {
 Token Lexer::ReadIdentifierOrKeyword() {
     size_t start_line = line_;
     size_t start_col = col_;
-    std::string value;
+    size_t start_pos = pos_;
 
     while (!IsAtEnd() && (std::isalnum(static_cast<unsigned char>(Peek())) || Peek() == '_' || Peek() == '.' || Peek() == '/')) {
-        value += Advance();
+        Advance();
     }
+    std::string value = source_.substr(start_pos, pos_ - start_pos);
 
     // Check keywords
     std::string lower_val;
@@ -152,18 +153,19 @@ Token Lexer::ReadIdentifierOrKeyword() {
 Token Lexer::ReadNumber() {
     size_t start_line = line_;
     size_t start_col = col_;
-    std::string value;
+    size_t start_pos = pos_;
 
     while (!IsAtEnd() && std::isdigit(static_cast<unsigned char>(Peek()))) {
-        value += Advance();
+        Advance();
     }
     
     if (!IsAtEnd() && Peek() == '.') {
-        value += Advance();
+        Advance();
         while (!IsAtEnd() && std::isdigit(static_cast<unsigned char>(Peek()))) {
-            value += Advance();
+            Advance();
         }
     }
+    std::string value = source_.substr(start_pos, pos_ - start_pos);
 
     return {TokenType::NUMBER, value, start_line, start_col};
 }
@@ -172,14 +174,17 @@ Token Lexer::ReadString() {
     size_t start_line = line_;
     size_t start_col = col_;
     char quote = Advance(); // Consume opening quote
-    std::string value;
+    size_t start_pos = pos_;
+    size_t length = 0;
 
     while (!IsAtEnd() && Peek() != quote) {
-        value += Advance();
-        if (value.length() > security::Limits::Get().max_string_length) {
+        Advance();
+        length++;
+        if (length > security::Limits::Get().max_string_length) {
             throw errors::SecurityError("String length exceeds maximum allowed limit", start_line, start_col);
         }
     }
+    std::string value = source_.substr(start_pos, length);
 
     if (IsAtEnd()) {
         throw errors::LexerError("Unterminated string literal", start_line, start_col);
