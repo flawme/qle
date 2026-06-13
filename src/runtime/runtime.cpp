@@ -1,5 +1,8 @@
 #include <limits>
 #include <map>
+#include <algorithm>
+#include <chrono>
+#include <cmath>
 #include "adapters/sqlite/sqlite_adapter.h"
 #include "runtime/runtime.h"
 #include "adapters/csv/csv_adapter.h"
@@ -183,6 +186,14 @@ std::string Runtime::EvaluateAggregate(const ast::ExpressionNode* expr, const st
                 if (expr->GetArgs().size() != 1) throw errors::RuntimeError("length() requires 1 argument", t.line, t.col);
                 std::string val = EvaluateAggregate(expr->GetArgs()[0].get(), bucket);
                 return std::to_string(val.length());
+            } else if (func_name == "abs") {
+                if (expr->GetArgs().size() != 1) throw errors::RuntimeError("abs() requires 1 argument", t.line, t.col);
+                std::string val = EvaluateAggregate(expr->GetArgs()[0].get(), bucket);
+                try { return std::to_string(std::abs(std::stod(val))); } catch(...) { return "0"; }
+            } else if (func_name == "round") {
+                if (expr->GetArgs().size() != 1) throw errors::RuntimeError("round() requires 1 argument", t.line, t.col);
+                std::string val = EvaluateAggregate(expr->GetArgs()[0].get(), bucket);
+                try { return std::to_string(std::round(std::stod(val))); } catch(...) { return "0"; }
             }
             throw errors::RuntimeError("Unsupported function in aggregate context", t.line, t.col);
         }
@@ -530,6 +541,14 @@ std::string Runtime::EvaluateExpression(const ast::ExpressionNode* expr,
             if (expr->GetArgs().size() != 1) throw errors::RuntimeError("length() requires 1 argument", t.line, t.col);
             std::string val = EvaluateExpression(expr->GetArgs()[0].get(), row);
             return std::to_string(val.length());
+        } else if (func_name == "abs") {
+            if (expr->GetArgs().size() != 1) throw errors::RuntimeError("abs() requires 1 argument", t.line, t.col);
+            std::string val = EvaluateExpression(expr->GetArgs()[0].get(), row);
+            try { return std::to_string(std::abs(std::stod(val))); } catch(...) { return "0"; }
+        } else if (func_name == "round") {
+            if (expr->GetArgs().size() != 1) throw errors::RuntimeError("round() requires 1 argument", t.line, t.col);
+            std::string val = EvaluateExpression(expr->GetArgs()[0].get(), row);
+            try { return std::to_string(std::round(std::stod(val))); } catch(...) { return "0"; }
         }
         
         // Aggregate function used outside aggregate context, just return an empty string or evaluate the inner part?

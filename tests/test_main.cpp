@@ -342,7 +342,11 @@ using namespace qle;
 
 void TestYamlAdapter() {
     std::cout << "Running Yaml Adapter Tests..." << std::endl;
-    lexer::Lexer lexer("from tests/test.yaml select id, name, age");
+    std::ofstream out("test.yaml");
+    out << "- id: 1\n  name: John\n  age: 30\n- id: 2\n  name: Jane\n  age: 25\n";
+    out.close();
+
+    lexer::Lexer lexer("from test.yaml select id, name, age");
     auto tokens = lexer.Tokenize();
     parser::Parser parser(tokens);
     auto query = parser.Parse();
