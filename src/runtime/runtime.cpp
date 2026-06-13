@@ -34,6 +34,7 @@ void Runtime::Execute(const ast::QueryNode* query) {
     adapter->Open(source_name);
 
     const ast::WhereNode* where_node = query->GetWhere();
+    const ast::JoinNode* join_node = query->GetJoin();
     const ast::SelectNode* select_node = query->GetSelect();
     const ast::OrderByNode* order_by = query->GetOrderBy();
     const ast::GroupByNode* group_by = query->GetGroupBy();
@@ -44,7 +45,7 @@ void Runtime::Execute(const ast::QueryNode* query) {
     } else if (order_by) {
         ExecuteWithOrderBy(*adapter, select_node, where_node, order_by, limit);
     } else {
-        ExecuteStreaming(*adapter, select_node, where_node, limit);
+        ExecuteStreaming(*adapter, select_node, where_node, join_node, limit);
     }
 
     adapter->Close();
@@ -273,19 +274,12 @@ void Runtime::ExecuteWithGroupBy(adapters::IAdapter& adapter,
 
 void Runtime::ExecuteStreaming(adapters::IAdapter& adapter,
                                const ast::SelectNode* select_node,
-                               const ast::WhereNode* where_node, size_t limit) {
+                               const ast::WhereNode* where_node, const ast::JoinNode* join_node, size_t limit) {
     bool header_printed = false;
     size_t output_count = 0;
     std::vector<std::string> field_names;
 
-    while (adapter.HasNext()) {
-        if (rows_processed_ >= security::Limits::Get().max_rows_processed) {
-            throw errors::SecurityError("Maximum row limit exceeded.");
-        }
-        adapters::Row row = adapter.Next();
-        rows_processed_++;
-        if (rows_processed_ % 10000 == 0) CheckTimeout();
-
+    auto process_row = [&](adapters::Row& row) {
         bool include_row = true;
         if (where_node) {
             include_row = EvaluateCondition(where_node->GetCondition(), row);
@@ -314,8 +308,37 @@ void Runtime::ExecuteStreaming(adapters::IAdapter& adapter,
                 formatter_.PrintRow(out_row, field_names, format_);
             }
             output_count++;
-            if (limit > 0 && output_count >= limit) break;
         }
+    };
+
+    while (adapter.HasNext()) {
+        if (rows_processed_ >= security::Limits::Get().max_rows_processed) {
+            throw errors::SecurityError("Maximum row limit exceeded.");
+        }
+        adapters::Row primary_row = adapter.Next();
+        rows_processed_++;
+        if (rows_processed_ % 10000 == 0) CheckTimeout();
+
+        if (join_node) {
+            auto joined_adapter = GetAdapterForSource(join_node->GetSource());
+            joined_adapter->Open(join_node->GetSource());
+            while (joined_adapter->HasNext()) {
+                adapters::Row joined_row = joined_adapter->Next();
+                adapters::Row row = primary_row;
+                for (const auto& kv : joined_row) {
+                    row[kv.first] = kv.second;
+                }
+                
+                if (EvaluateCondition(join_node->GetCondition(), row)) {
+                    process_row(row);
+                }
+                if (limit > 0 && output_count >= limit) break;
+            }
+            joined_adapter->Close();
+        } else {
+            process_row(primary_row);
+        }
+        if (limit > 0 && output_count >= limit) break;
     }
 
     if (!header_printed && !select_node->IsWildcard()) {

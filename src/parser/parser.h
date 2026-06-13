@@ -40,6 +40,7 @@ private:
     void TrackNodeCreation();
 
     std::unique_ptr<ast::SourceNode> ParseFrom();
+    std::unique_ptr<ast::JoinNode> ParseJoin();
     std::unique_ptr<ast::WhereNode> ParseWhere();
     std::unique_ptr<ast::SelectNode> ParseSelect();
     size_t ParseLimit();

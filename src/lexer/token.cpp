@@ -17,6 +17,8 @@ std::string ToString(TokenType type) {
         case TokenType::GROUP: return "GROUP";
         case TokenType::ASC: return "ASC";
         case TokenType::DESC: return "DESC";
+        case TokenType::JOIN: return "JOIN";
+        case TokenType::ON: return "ON";
         case TokenType::GREATER_THAN: return ">";
         case TokenType::LESS_THAN: return "<";
         case TokenType::EQUALS: return "==";

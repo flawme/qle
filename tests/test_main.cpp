@@ -16,6 +16,7 @@ using namespace qle;
 void TestAggregationsAndGroupBy();
 void TestInlineFunctions();
 void TestSqliteAdapter();
+void TestJoin();
 void TestReplEdgeCases();
 void TestCliLimits();
 void TestMaxRowsLimit();
@@ -193,6 +194,7 @@ int main() {
     TestInlineFunctions();
     TestSqliteAdapter();
     TestReplEdgeCases();
+    TestJoin();
     TestCliLimits();
     TestMaxRowsLimit();
     TestTimeoutLimit();
@@ -351,4 +353,42 @@ void TestYamlAdapter() {
     // Redirect output? Actually we just run it and see if it crashes.
     // Or we could verify rows.
     runtime.Execute(query.get());
+}
+
+void TestJoin() {
+    std::cout << "Running Join Tests..." << std::endl;
+    // create users.csv
+    FILE* fu = fopen("../tests/users.csv", "w");
+    if (!fu) fu = fopen("tests/users.csv", "w");
+    if (fu) {
+        fprintf(fu, "id,name\n1,Alice\n2,Bob\n3,Charlie\n");
+        fclose(fu);
+    }
+    
+    // create orders.csv
+    FILE* fo = fopen("../tests/orders.csv", "w");
+    if (!fo) fo = fopen("tests/orders.csv", "w");
+    if (fo) {
+        fprintf(fo, "order_id,user_id,item\n101,1,Apple\n102,1,Banana\n103,2,Carrot\n104,4,Date\n");
+        fclose(fo);
+    }
+    
+    try {
+        std::string query = "from ../tests/users.csv join ../tests/orders.csv on id == user_id select name, item";
+        qle::lexer::Lexer lexer(query);
+        qle::parser::Parser parser(lexer.Tokenize());
+        qle::runtime::Runtime rt;
+        rt.Execute(parser.Parse().get());
+    } catch (const std::exception& e) {
+        std::cerr << "Join test failed (../tests/): " << e.what() << std::endl;
+        try {
+            std::string query = "from tests/users.csv join tests/orders.csv on id == user_id select name, item";
+            qle::lexer::Lexer lexer(query);
+            qle::parser::Parser parser(lexer.Tokenize());
+            qle::runtime::Runtime rt;
+            rt.Execute(parser.Parse().get());
+        } catch (const std::exception& e) {
+            std::cerr << "Join test failed (tests/): " << e.what() << std::endl;
+        }
+    }
 }

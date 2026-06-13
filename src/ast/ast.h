@@ -15,7 +15,8 @@ enum class NodeType {
     SELECT,
     EXPRESSION,
     ORDER_BY,
-    GROUP_BY
+    GROUP_BY,
+    JOIN
 };
 
 enum class OrderDirection {
@@ -112,9 +113,24 @@ private:
     OrderDirection direction_;
 };
 
+
+class JoinNode : public AstNode {
+public:
+    JoinNode(const std::string& source, std::unique_ptr<ExpressionNode> condition);
+    
+    NodeType GetType() const override { return NodeType::JOIN; }
+    const std::string& GetSource() const { return source_; }
+    const ExpressionNode* GetCondition() const { return condition_.get(); }
+
+private:
+    std::string source_;
+    std::unique_ptr<ExpressionNode> condition_;
+};
+
 class QueryNode : public AstNode {
 public:
     QueryNode(std::unique_ptr<SourceNode> source,
+              std::unique_ptr<JoinNode> join_clause,
               std::unique_ptr<WhereNode> where_clause,
               std::unique_ptr<SelectNode> select_clause,
               size_t limit,
@@ -129,9 +145,11 @@ public:
     size_t GetLimit() const { return limit_; }
     const OrderByNode* GetOrderBy() const { return order_by_.get(); }
     const GroupByNode* GetGroupBy() const { return group_by_.get(); }
+    const JoinNode* GetJoin() const { return join_clause_.get(); }
 
 private:
     std::unique_ptr<SourceNode> source_;
+    std::unique_ptr<JoinNode> join_clause_;
     std::unique_ptr<WhereNode> where_clause_;
     std::unique_ptr<SelectNode> select_clause_;
     size_t limit_;

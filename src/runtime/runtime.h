@@ -33,7 +33,7 @@ private:
                             
     void ExecuteStreaming(adapters::IAdapter& adapter,
                          const ast::SelectNode* select_node,
-                         const ast::WhereNode* where_node, size_t limit);
+                         const ast::WhereNode* where_node, const ast::JoinNode* join_node, size_t limit);
                          
     void ExecuteWithGroupBy(adapters::IAdapter& adapter,
                             const ast::SelectNode* select_node,

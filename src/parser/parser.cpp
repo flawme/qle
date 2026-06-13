@@ -24,6 +24,7 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
     Debug::DebugLog("Starting parsing");
     
     std::unique_ptr<ast::SourceNode> source = nullptr;
+    std::unique_ptr<ast::JoinNode> join_clause = nullptr;
     std::unique_ptr<ast::WhereNode> where_clause = nullptr;
     std::unique_ptr<ast::SelectNode> select_clause = nullptr;
     size_t limit = 0;
@@ -37,6 +38,11 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
                 throw errors::ParserError("Multiple FROM clauses found", Previous().line, Previous().col);
             }
             source = ParseFrom();
+        } else if (Match({lexer::TokenType::JOIN})) {
+            if (join_clause) {
+                throw errors::ParserError("Multiple JOIN clauses found", Previous().line, Previous().col);
+            }
+            join_clause = ParseJoin();
         } else if (Match({lexer::TokenType::WHERE})) {
             if (where_clause) {
                 throw errors::ParserError("Multiple WHERE clauses found", Previous().line, Previous().col);
@@ -77,7 +83,7 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
 
     TrackNodeCreation();
     Debug::DebugLog("Parsing complete");
-    return std::make_unique<ast::QueryNode>(std::move(source), std::move(where_clause), std::move(select_clause), limit, std::move(order_by), std::move(group_by));
+    return std::make_unique<ast::QueryNode>(std::move(source), std::move(join_clause), std::move(where_clause), std::move(select_clause), limit, std::move(order_by), std::move(group_by));
 }
 
 bool Parser::IsAtEnd() const {
@@ -128,6 +134,16 @@ std::unique_ptr<ast::SourceNode> Parser::ParseFrom() {
     Consume(lexer::TokenType::IDENTIFIER, "Expect source name after FROM.");
     TrackNodeCreation();
     return std::make_unique<ast::SourceNode>(Previous().value);
+}
+
+
+std::unique_ptr<ast::JoinNode> Parser::ParseJoin() {
+    Consume(lexer::TokenType::IDENTIFIER, "Expect source name after JOIN.");
+    std::string join_source = Previous().value;
+    Consume(lexer::TokenType::ON, "Expect ON after JOIN source.");
+    auto condition = ParseExpression();
+    TrackNodeCreation();
+    return std::make_unique<ast::JoinNode>(join_source, std::move(condition));
 }
 
 std::unique_ptr<ast::WhereNode> Parser::ParseWhere() {
