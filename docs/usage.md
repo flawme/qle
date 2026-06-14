@@ -17,8 +17,8 @@ You will be dropped into a live `qle > ` prompt where you can execute queries an
 A valid QLE query requires a `from` and a `select` clause. The `where`, `group by`, `order by`, and `limit` clauses are optional.
 
 ```text
-from <source_file>
-[join <source_file2> on <condition>]
+from <source_file | (subquery)>
+[join <source_file2> on <condition> ...]
 [where <condition>]
 [group by <field>]
 select <field1, field2 | * | count | sum(field) | avg(field) | min(field) | max(field)>
@@ -40,6 +40,12 @@ You can manipulate strings and numbers on the fly inside `select` or `where` cla
 - `length(field)`: Returns the character length of the field.
 - `abs(field)`: Returns the absolute mathematical value.
 - `round(field)`: Rounds a float to the nearest integer.
+- `now()`: Returns the current UTC timestamp.
+- `year(field)`, `month(field)`, `day(field)`: Extracts date components from a date string.
+
+### Pattern Matching (`LIKE`)
+You can use the `like` operator in your `where` clauses to perform regex-style pattern matching using `%` (matches multiple characters) and `_` (matches a single character).
+*Example:* `where name like "A%"` or `where phone like "555-____"`
 
 *Example:* `from users.csv join orders.csv on id == user_id where length(password) < 8 select upper(name), round(price)`
 
