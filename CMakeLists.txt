@@ -12,7 +12,7 @@ add_compile_options(-Wall -Wextra)
 include_directories(src)
 
 # Source files
-file(GLOB_RECURSE SRC_FILES src/*.cpp)
+file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS src/*.cpp)
 list(APPEND SRC_FILES "${CMAKE_SOURCE_DIR}/src/adapters/sqlite/sqlite3.c")
 
 # Remove main from SRC_FILES if building tests
