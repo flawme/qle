@@ -31,9 +31,16 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
     bool has_limit = false;
     std::unique_ptr<ast::OrderByNode> order_by = nullptr;
     std::unique_ptr<ast::GroupByNode> group_by = nullptr;
+    std::unique_ptr<ast::HavingNode> having_clause = nullptr;
+    std::vector<std::unique_ptr<ast::WithNode>> with_clauses;
 
     while (!IsAtEnd() && !Check(lexer::TokenType::RIGHT_PAREN)) {
-        if (Match({lexer::TokenType::FROM})) {
+        if (Match({lexer::TokenType::WITH})) {
+            if (!with_clauses.empty()) {
+                throw errors::ParserError("Multiple WITH clauses found", Previous().line, Previous().col);
+            }
+            with_clauses = ParseWith();
+        } else if (Match({lexer::TokenType::FROM})) {
             if (source) {
                 throw errors::ParserError("Multiple FROM clauses found", Previous().line, Previous().col);
             }
@@ -69,6 +76,11 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
                 throw errors::ParserError("Multiple GROUP BY clauses found", Previous().line, Previous().col);
             }
             group_by = ParseGroupBy();
+        } else if (Match({lexer::TokenType::HAVING})) {
+            if (having_clause) {
+                throw errors::ParserError("Multiple HAVING clauses found", Previous().line, Previous().col);
+            }
+            having_clause = ParseHaving();
         } else {
             throw errors::ParserError("Unexpected token: " + Peek().value, Peek().line, Peek().col);
         }
@@ -83,7 +95,10 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
 
     TrackNodeCreation();
     Debug::DebugLog("Parsing complete");
-    return std::make_unique<ast::QueryNode>(std::move(source), std::move(join_clauses), std::move(where_clause), std::move(select_clause), limit, std::move(order_by), std::move(group_by));
+    auto q = std::make_unique<ast::QueryNode>(std::move(source), std::move(join_clauses), std::move(where_clause), std::move(select_clause), limit, std::move(order_by), std::move(group_by));
+    q->SetHaving(std::move(having_clause));
+    q->SetWithClauses(std::move(with_clauses));
+    return q;
 }
 
 bool Parser::IsAtEnd() const {
@@ -157,6 +172,27 @@ std::unique_ptr<ast::WhereNode> Parser::ParseWhere() {
     auto condition = ParseExpression();
     TrackNodeCreation();
     return std::make_unique<ast::WhereNode>(std::move(condition));
+}
+
+std::unique_ptr<ast::HavingNode> Parser::ParseHaving() {
+    auto condition = ParseExpression();
+    TrackNodeCreation();
+    return std::make_unique<ast::HavingNode>(std::move(condition));
+}
+
+std::vector<std::unique_ptr<ast::WithNode>> Parser::ParseWith() {
+    std::vector<std::unique_ptr<ast::WithNode>> with_nodes;
+    do {
+        Consume(lexer::TokenType::IDENTIFIER, "Expect CTE alias after WITH.");
+        std::string alias = Previous().value;
+        Consume(lexer::TokenType::AS, "Expect AS after CTE alias.");
+        Consume(lexer::TokenType::LEFT_PAREN, "Expect '(' after AS.");
+        auto query = Parse();
+        Consume(lexer::TokenType::RIGHT_PAREN, "Expect ')' after CTE subquery.");
+        TrackNodeCreation();
+        with_nodes.push_back(std::make_unique<ast::WithNode>(alias, std::move(query)));
+    } while (Match({lexer::TokenType::COMMA}));
+    return with_nodes;
 }
 
 std::unique_ptr<ast::SelectNode> Parser::ParseSelect() {

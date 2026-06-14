@@ -11,6 +11,9 @@ enum class TokenType {
     STRING,
     
     // Keywords
+    WITH,
+    AS,
+    HAVING,
     FROM,
     WHERE,
     SELECT,

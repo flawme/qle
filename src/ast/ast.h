@@ -16,7 +16,9 @@ enum class NodeType {
     EXPRESSION,
     ORDER_BY,
     GROUP_BY,
-    JOIN
+    JOIN,
+    HAVING,
+    WITH
 };
 
 enum class OrderDirection {
@@ -80,6 +82,30 @@ public:
 
 private:
     std::unique_ptr<ExpressionNode> condition_;
+};
+
+class HavingNode : public AstNode {
+public:
+    explicit HavingNode(std::unique_ptr<ExpressionNode> condition);
+    
+    NodeType GetType() const override { return NodeType::HAVING; }
+    const ExpressionNode* GetCondition() const { return condition_.get(); }
+
+private:
+    std::unique_ptr<ExpressionNode> condition_;
+};
+
+class WithNode : public AstNode {
+public:
+    WithNode(const std::string& alias, std::unique_ptr<QueryNode> query);
+    
+    NodeType GetType() const override { return NodeType::WITH; }
+    const std::string& GetAlias() const { return alias_; }
+    const QueryNode* GetQuery() const { return query_.get(); }
+
+private:
+    std::string alias_;
+    std::unique_ptr<QueryNode> query_;
 };
 
 class SelectNode : public AstNode {
@@ -151,7 +177,12 @@ public:
     size_t GetLimit() const { return limit_; }
     const OrderByNode* GetOrderBy() const { return order_by_.get(); }
     const GroupByNode* GetGroupBy() const { return group_by_.get(); }
+    const HavingNode* GetHaving() const { return having_clause_.get(); }
     const std::vector<std::unique_ptr<JoinNode>>& GetJoins() const { return join_clauses_; }
+    const std::vector<std::unique_ptr<WithNode>>& GetWithClauses() const { return with_clauses_; }
+
+    void SetHaving(std::unique_ptr<HavingNode> having) { having_clause_ = std::move(having); }
+    void SetWithClauses(std::vector<std::unique_ptr<WithNode>> withs) { with_clauses_ = std::move(withs); }
 
 private:
     std::unique_ptr<SourceNode> source_;
@@ -161,6 +192,8 @@ private:
     size_t limit_;
     std::unique_ptr<OrderByNode> order_by_;
     std::unique_ptr<GroupByNode> group_by_;
+    std::unique_ptr<HavingNode> having_clause_;
+    std::vector<std::unique_ptr<WithNode>> with_clauses_;
 };
 
 } // namespace ast

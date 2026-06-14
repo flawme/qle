@@ -39,9 +39,11 @@ private:
 
     void TrackNodeCreation();
 
+    std::vector<std::unique_ptr<ast::WithNode>> ParseWith();
     std::unique_ptr<ast::SourceNode> ParseFrom();
     std::unique_ptr<ast::JoinNode> ParseJoin();
     std::unique_ptr<ast::WhereNode> ParseWhere();
+    std::unique_ptr<ast::HavingNode> ParseHaving();
     std::unique_ptr<ast::SelectNode> ParseSelect();
     size_t ParseLimit();
     std::unique_ptr<ast::OrderByNode> ParseOrderBy();

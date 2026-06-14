@@ -8,6 +8,9 @@ std::string ToString(TokenType type) {
         case TokenType::IDENTIFIER: return "IDENTIFIER";
         case TokenType::NUMBER: return "NUMBER";
         case TokenType::STRING: return "STRING";
+        case TokenType::WITH: return "WITH";
+        case TokenType::AS: return "AS";
+        case TokenType::HAVING: return "HAVING";
         case TokenType::FROM: return "FROM";
         case TokenType::WHERE: return "WHERE";
         case TokenType::SELECT: return "SELECT";

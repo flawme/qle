@@ -133,6 +133,9 @@ Token Lexer::ReadIdentifierOrKeyword() {
         lower_val += std::tolower(static_cast<unsigned char>(c));
     }
 
+    if (lower_val == "with") return {TokenType::WITH, lower_val, start_line, start_col};
+    if (lower_val == "as") return {TokenType::AS, lower_val, start_line, start_col};
+    if (lower_val == "having") return {TokenType::HAVING, lower_val, start_line, start_col};
     if (lower_val == "from") return {TokenType::FROM, lower_val, start_line, start_col};
     if (lower_val == "where") return {TokenType::WHERE, lower_val, start_line, start_col};
     if (lower_val == "select") return {TokenType::SELECT, lower_val, start_line, start_col};
