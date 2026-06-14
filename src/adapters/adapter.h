@@ -50,6 +50,11 @@ public:
     virtual bool HasNext() = 0;
     virtual Row Next() = 0;
     virtual void Close() = 0;
+    
+    virtual void SetProjectedColumns(const std::vector<std::string>& cols) {}
+    
+    virtual bool SupportsParallel() const { return false; }
+    virtual std::vector<std::unique_ptr<IAdapter>> Split(size_t num_splits) { return {}; }
 };
 
 } // namespace adapters

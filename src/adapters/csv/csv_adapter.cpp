@@ -12,7 +12,7 @@ namespace qle {
 namespace adapters {
 namespace csv {
 
-CsvAdapter::CsvAdapter() : fd_(-1), mmap_data_(nullptr), mmap_size_(0), offset_(0) {}
+CsvAdapter::CsvAdapter() : fd_(-1), mmap_data_(nullptr), mmap_size_(0), offset_(0), end_offset_(0), is_child_(false) {}
 
 CsvAdapter::~CsvAdapter() {
     Close();
@@ -43,6 +43,7 @@ void CsvAdapter::Open(const std::string& source) {
         }
     }
 
+    end_offset_ = mmap_size_;
     ReadHeaders();
 }
 
@@ -68,10 +69,26 @@ void CsvAdapter::ReadHeaders() {
             h = h.substr(1, h.size() - 2);
         }
     }
+    
+    is_projected_.assign(headers_.size(), projected_cols_.empty());
+    if (!projected_cols_.empty()) {
+        for (size_t i = 0; i < headers_.size(); ++i) {
+            for (const auto& p : projected_cols_) {
+                if (headers_[i] == p) {
+                    is_projected_[i] = true;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void CsvAdapter::SetProjectedColumns(const std::vector<std::string>& cols) {
+    projected_cols_ = cols;
 }
 
 bool CsvAdapter::HasNext() {
-    return offset_ < mmap_size_;
+    return offset_ < end_offset_;
 }
 
 Row CsvAdapter::Next() {
@@ -90,7 +107,7 @@ Row CsvAdapter::Next() {
         if (c == '"') {
             in_quotes = !in_quotes;
         } else if (c == ',' && !in_quotes) {
-            if (col_idx < n_headers) {
+            if (col_idx < n_headers && is_projected_[col_idx]) {
                 const char* start_ptr = mmap_data_ + cell_start;
                 size_t len = i - cell_start;
                 if (len > 0 && start_ptr[len - 1] == '\r') len--;
@@ -103,7 +120,7 @@ Row CsvAdapter::Next() {
             col_idx++;
             cell_start = i + 1;
         } else if (c == '\n' && !in_quotes) {
-            if (col_idx < n_headers) {
+            if (col_idx < n_headers && is_projected_[col_idx]) {
                 const char* start_ptr = mmap_data_ + cell_start;
                 size_t len = i - cell_start;
                 if (len > 0 && start_ptr[len - 1] == '\r') len--;
@@ -119,7 +136,7 @@ Row CsvAdapter::Next() {
     }
     
     // End of file
-    if (cell_start < mmap_size_ && col_idx < n_headers) {
+    if (cell_start < mmap_size_ && col_idx < n_headers && is_projected_[col_idx]) {
         const char* start_ptr = mmap_data_ + cell_start;
         size_t len = mmap_size_ - cell_start;
         if (len > 0 && start_ptr[len - 1] == '\r') len--;
@@ -134,14 +151,58 @@ Row CsvAdapter::Next() {
 }
 
 void CsvAdapter::Close() {
-    if (mmap_data_ && mmap_data_ != MAP_FAILED) {
-        munmap(mmap_data_, mmap_size_);
-        mmap_data_ = nullptr;
+    if (!is_child_) {
+        if (mmap_data_ && mmap_data_ != MAP_FAILED) {
+            munmap(mmap_data_, mmap_size_);
+            mmap_data_ = nullptr;
+        }
+        if (fd_ >= 0) {
+            close(fd_);
+            fd_ = -1;
+        }
     }
-    if (fd_ >= 0) {
-        close(fd_);
-        fd_ = -1;
+}
+
+std::vector<std::unique_ptr<IAdapter>> CsvAdapter::Split(size_t num_splits) {
+    std::vector<std::unique_ptr<IAdapter>> splits;
+    if (mmap_size_ == 0 || num_splits <= 1) {
+        return splits; // Not splittable or just 1 split requested
     }
+    
+    // We start parsing data from offset_ (after headers)
+    size_t data_start = offset_;
+    size_t data_size = mmap_size_ - data_start;
+    size_t chunk_size = data_size / num_splits;
+    
+    for (size_t i = 0; i < num_splits; ++i) {
+        auto child = std::make_unique<CsvAdapter>();
+        child->fd_ = this->fd_;
+        child->mmap_data_ = this->mmap_data_;
+        child->mmap_size_ = this->mmap_size_;
+        child->is_child_ = true;
+        child->headers_ = this->headers_;
+        child->projected_cols_ = this->projected_cols_;
+        child->is_projected_ = this->is_projected_;
+        
+        size_t start = data_start + i * chunk_size;
+        size_t end = (i == num_splits - 1) ? mmap_size_ : data_start + (i + 1) * chunk_size;
+        child->SetChunk(start, end);
+        splits.push_back(std::move(child));
+    }
+    return splits;
+}
+
+void CsvAdapter::SetChunk(size_t start, size_t end) {
+    end_offset_ = end;
+    
+    // If we're not starting right at data_start, we must advance to the next newline
+    // so we don't start in the middle of a line.
+    size_t cur = start;
+    if (cur > 0 && mmap_data_[cur - 1] != '\n') {
+        while (cur < mmap_size_ && mmap_data_[cur] != '\n') cur++;
+        if (cur < mmap_size_) cur++;
+    }
+    offset_ = cur;
 }
 
 } // namespace csv

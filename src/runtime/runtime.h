@@ -6,9 +6,21 @@
 #include <memory>
 #include <vector>
 #include <chrono>
+#include <unordered_map>
 
 namespace qle {
 namespace runtime {
+
+bool TryParseDouble(const std::string& str, double& out_val);
+
+struct AggState {
+    size_t count = 0;
+    std::unordered_map<const ast::ExpressionNode*, double> sums;
+    std::unordered_map<const ast::ExpressionNode*, double> mins;
+    std::unordered_map<const ast::ExpressionNode*, double> maxs;
+    std::unordered_map<const ast::ExpressionNode*, bool> has_vals;
+    adapters::Row first_row;
+};
 
 class Runtime {
 public:
@@ -16,12 +28,15 @@ public:
 
     void SetFormat(utils::OutputFormat format);
     void Execute(const ast::QueryNode* query);
+    void CollectIdentifiers(const ast::AstNode* node, std::vector<std::string>& cols);
+    void CollectAggregates(const ast::AstNode* node, std::vector<const ast::ExpressionNode*>& aggs);
     std::vector<adapters::Row> ExecuteToMemory(const ast::QueryNode* query);
 
 private:
     std::unique_ptr<adapters::IAdapter> GetAdapterForSource(const std::string& source);
     bool EvaluateCondition(const ast::ExpressionNode* expr, const adapters::Row& row);
     std::string EvaluateExpression(const ast::ExpressionNode* expr, const adapters::Row& row);
+    std::string EvaluateAggregate(const ast::ExpressionNode* expr, const AggState& state);
 
     std::vector<std::string> ResolveWildcard(const adapters::Row& row);
     void SortRows(std::vector<adapters::Row>& rows, const ast::OrderByNode* order_by);
