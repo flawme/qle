@@ -109,8 +109,8 @@ def main():
         ("Aggregations", "GROUP BY + SUM", f"from bench.csv group by age select sum(score)"),
         ("Aggregations", "GROUP BY + MIN/MAX", f"from bench.csv group by age select min(score), max(score)"),
         
-        ("Sorting", "ORDER BY (Numeric)", f"from bench.csv order by score desc limit 10"),
-        ("Sorting", "ORDER BY (String)", f"from bench.csv order by name asc limit 10"),
+        ("Sorting", "ORDER BY (Numeric)", f"from bench.csv select id, score order by score desc limit 10"),
+        ("Sorting", "ORDER BY (String)", f"from bench.csv select id, name order by name asc limit 10"),
         
         ("Functions", "String Functions", f"from bench.csv select upper(name), concat(name, age) limit 1000"),
         ("Functions", "Math Functions", f"from bench.csv select abs(score), round(age) limit 1000"),
