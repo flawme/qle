@@ -1,0 +1,5 @@
+from users.csv
+join orders.csv on id == user_id
+join products.csv on order_id == product_id
+where price > 100
+select name, product_name, price

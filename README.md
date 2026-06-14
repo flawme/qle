@@ -4,15 +4,14 @@ A lightweight, interpreted query language for querying multiple data sources usi
 
 ## Features
 
-- **Blazing Fast**: Optimized C++17 runtime with zero external dependencies.
+- **Zero-Dependency Core:** Written entirely in modern C++17 without heavy external data-processing libraries.
 - **Interactive REPL**: Explore your data interactively via the built-in shell.
-- **Universal Querying**: Use SQL-like syntax (`SELECT`, `WHERE`, `ORDER BY`, `LIMIT`, `GROUP BY`) on flat files.
-- **Cross-Platform SQLite**: Natively query `.sqlite` files. The SQLite engine is bundled directly into the binary!
-- **Data Transformations**: Perform inline string manipulation using `upper()`, `lower()`, `concat()`, etc.
-- **Aggregations**: Bucket your data using `GROUP BY` and compute `sum`, `avg`, `min`, `max`.
-- **Multi-File Joins**: Perform blazing-fast cross-file queries using the $O(1)$ nested Hash Join engine.
-- **Modular Adapters**: Currently supports `CSV`, `JSON`, `SQLite`, and `YAML`.
-- **Typo Suggestions**: Helpful Levenshtein distance-based suggestions when you mistype a field name.
+- **Multiple Data Formats:** Supports CSV, JSON, SQLite, YAML, and XML out of the box with zero-copy stream parsing.
+- **Subqueries & Complex Relations:** Supports recursive subquery evaluations and infinite chained `$O(1)` Hash Joins natively.
+- **Data Transformations:** Perform inline string manipulation using `upper()`, `lower()`, `concat()`, `now()`, `year()`, etc.
+- **Advanced Querying:** Supports nested `AND`/`OR` filtering, `GROUP BY` aggregations, `ORDER BY` sorting, and mathematical/date inline functions.
+- **`LIKE` Filtering:** Supports powerful wildcard regex pattern matching out of the box.
+- **Execution Limits:** Strict memory-capping and row-processing timeouts protect the engine against recursive loops and adversarial file structures.
 
 ## Documentation
 

@@ -1,0 +1,3 @@
+from (from users.csv where age > 18 select id, name)
+join orders.csv on id == user_id
+select name, price

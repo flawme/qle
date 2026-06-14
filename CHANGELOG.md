@@ -1,5 +1,14 @@
 # QLE Changelog
 
+## [v0.1.7] - 2026-06-14
+
+### Added
+- **Subqueries in `FROM` Clause:** The execution engine now supports recursive queries nested directly inside the `FROM` clause. Subqueries are seamlessly evaluated into a secure sandbox `MemoryAdapter` and passed upward.
+- **Multiple Chained `JOIN`s:** The $O(1)$ Hash Join engine was overhauled to support infinite left-to-right table joins simultaneously (e.g. `from A join B on ... join C on ...`).
+- **`LIKE` Pattern Matching:** Added support for SQL-style `%` (multi-char) and `_` (single-char) regex wildcard filters.
+- **Date & Time Engine:** Added `<chrono>` powered `now()`, `year()`, `month()`, and `day()` extraction inline functions.
+- **Native XML Adapter:** Added a completely zero-dependency streaming recursive XML adapter to parse massive tree datasets securely.
+
 ## [v0.1.6] - 2026-06-13
 
 ### Changed
