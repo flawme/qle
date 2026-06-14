@@ -19,6 +19,7 @@ std::string ToString(TokenType type) {
         case TokenType::DESC: return "DESC";
         case TokenType::JOIN: return "JOIN";
         case TokenType::ON: return "ON";
+        case TokenType::LIKE: return "LIKE";
         case TokenType::GREATER_THAN: return ">";
         case TokenType::LESS_THAN: return "<";
         case TokenType::EQUALS: return "==";

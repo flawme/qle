@@ -54,15 +54,21 @@ private:
     bool is_function_call_ = false;
 };
 
+class QueryNode;
+
 class SourceNode : public AstNode {
 public:
     explicit SourceNode(const std::string& source_name);
+    explicit SourceNode(std::unique_ptr<QueryNode> subquery);
     
     NodeType GetType() const override { return NodeType::SOURCE; }
     const std::string& GetSourceName() const { return source_name_; }
+    bool IsSubquery() const { return subquery_ != nullptr; }
+    const QueryNode* GetSubquery() const { return subquery_.get(); }
 
 private:
     std::string source_name_;
+    std::unique_ptr<QueryNode> subquery_;
 };
 
 class WhereNode : public AstNode {
@@ -130,7 +136,7 @@ private:
 class QueryNode : public AstNode {
 public:
     QueryNode(std::unique_ptr<SourceNode> source,
-              std::unique_ptr<JoinNode> join_clause,
+              std::vector<std::unique_ptr<JoinNode>> join_clauses,
               std::unique_ptr<WhereNode> where_clause,
               std::unique_ptr<SelectNode> select_clause,
               size_t limit,
@@ -145,11 +151,11 @@ public:
     size_t GetLimit() const { return limit_; }
     const OrderByNode* GetOrderBy() const { return order_by_.get(); }
     const GroupByNode* GetGroupBy() const { return group_by_.get(); }
-    const JoinNode* GetJoin() const { return join_clause_.get(); }
+    const std::vector<std::unique_ptr<JoinNode>>& GetJoins() const { return join_clauses_; }
 
 private:
     std::unique_ptr<SourceNode> source_;
-    std::unique_ptr<JoinNode> join_clause_;
+    std::vector<std::unique_ptr<JoinNode>> join_clauses_;
     std::unique_ptr<WhereNode> where_clause_;
     std::unique_ptr<SelectNode> select_clause_;
     size_t limit_;

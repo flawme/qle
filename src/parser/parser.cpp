@@ -24,7 +24,7 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
     Debug::DebugLog("Starting parsing");
     
     std::unique_ptr<ast::SourceNode> source = nullptr;
-    std::unique_ptr<ast::JoinNode> join_clause = nullptr;
+    std::vector<std::unique_ptr<ast::JoinNode>> join_clauses;
     std::unique_ptr<ast::WhereNode> where_clause = nullptr;
     std::unique_ptr<ast::SelectNode> select_clause = nullptr;
     size_t limit = 0;
@@ -32,17 +32,17 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
     std::unique_ptr<ast::OrderByNode> order_by = nullptr;
     std::unique_ptr<ast::GroupByNode> group_by = nullptr;
 
-    while (!IsAtEnd()) {
+    while (!IsAtEnd() && !Check(lexer::TokenType::RIGHT_PAREN)) {
         if (Match({lexer::TokenType::FROM})) {
             if (source) {
                 throw errors::ParserError("Multiple FROM clauses found", Previous().line, Previous().col);
             }
             source = ParseFrom();
         } else if (Match({lexer::TokenType::JOIN})) {
-            if (join_clause) {
-                throw errors::ParserError("Multiple JOIN clauses found", Previous().line, Previous().col);
+            join_clauses.push_back(ParseJoin());
+            while(Match({lexer::TokenType::JOIN})) {
+                join_clauses.push_back(ParseJoin());
             }
-            join_clause = ParseJoin();
         } else if (Match({lexer::TokenType::WHERE})) {
             if (where_clause) {
                 throw errors::ParserError("Multiple WHERE clauses found", Previous().line, Previous().col);
@@ -83,7 +83,7 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
 
     TrackNodeCreation();
     Debug::DebugLog("Parsing complete");
-    return std::make_unique<ast::QueryNode>(std::move(source), std::move(join_clause), std::move(where_clause), std::move(select_clause), limit, std::move(order_by), std::move(group_by));
+    return std::make_unique<ast::QueryNode>(std::move(source), std::move(join_clauses), std::move(where_clause), std::move(select_clause), limit, std::move(order_by), std::move(group_by));
 }
 
 bool Parser::IsAtEnd() const {
@@ -131,6 +131,12 @@ void Parser::TrackNodeCreation() {
 }
 
 std::unique_ptr<ast::SourceNode> Parser::ParseFrom() {
+    if (Match({lexer::TokenType::LEFT_PAREN})) {
+        auto subquery = Parse();
+        Consume(lexer::TokenType::RIGHT_PAREN, "Expect ')' after subquery.");
+        TrackNodeCreation();
+        return std::make_unique<ast::SourceNode>(std::move(subquery));
+    }
     Consume(lexer::TokenType::IDENTIFIER, "Expect source name after FROM.");
     TrackNodeCreation();
     return std::make_unique<ast::SourceNode>(Previous().value);
@@ -245,7 +251,7 @@ std::unique_ptr<ast::ExpressionNode> Parser::ParseEquality() {
     RecursionGuard guard(this);
     auto expr = ParseComparison();
 
-    while (Match({lexer::TokenType::EQUALS, lexer::TokenType::NOT_EQUALS})) {
+    while (Match({lexer::TokenType::EQUALS, lexer::TokenType::NOT_EQUALS, lexer::TokenType::LIKE})) {
         lexer::Token op = Previous();
         auto right = ParseComparison();
         TrackNodeCreation();

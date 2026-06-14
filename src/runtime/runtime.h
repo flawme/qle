@@ -16,6 +16,7 @@ public:
 
     void SetFormat(utils::OutputFormat format);
     void Execute(const ast::QueryNode* query);
+    std::vector<adapters::Row> ExecuteToMemory(const ast::QueryNode* query);
 
 private:
     std::unique_ptr<adapters::IAdapter> GetAdapterForSource(const std::string& source);
@@ -33,7 +34,7 @@ private:
                             
     void ExecuteStreaming(adapters::IAdapter& adapter,
                          const ast::SelectNode* select_node,
-                         const ast::WhereNode* where_node, const ast::JoinNode* join_node, size_t limit);
+                         const ast::WhereNode* where_node, const std::vector<std::unique_ptr<ast::JoinNode>>& join_nodes, size_t limit);
                          
     void ExecuteWithGroupBy(adapters::IAdapter& adapter,
                             const ast::SelectNode* select_node,
@@ -52,6 +53,8 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> start_time_;
     utils::OutputFormat format_;
     utils::Formatter formatter_;
+    bool execute_to_memory_ = false;
+    std::vector<adapters::Row> memory_results_;
 };
 
 } // namespace runtime

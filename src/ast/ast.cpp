@@ -15,6 +15,9 @@ ExpressionNode::ExpressionNode(lexer::Token function_name, std::vector<std::uniq
 SourceNode::SourceNode(const std::string& source_name)
     : source_name_(source_name) {}
 
+SourceNode::SourceNode(std::unique_ptr<QueryNode> subquery)
+    : source_name_(""), subquery_(std::move(subquery)) {}
+
 WhereNode::WhereNode(std::unique_ptr<ExpressionNode> condition)
     : condition_(std::move(condition)) {}
 
@@ -32,14 +35,14 @@ JoinNode::JoinNode(const std::string& source, std::unique_ptr<ExpressionNode> co
     : source_(source), condition_(std::move(condition)) {}
 
 QueryNode::QueryNode(std::unique_ptr<SourceNode> source,
-                     std::unique_ptr<JoinNode> join_clause,
+                     std::vector<std::unique_ptr<JoinNode>> join_clauses,
                      std::unique_ptr<WhereNode> where_clause,
                      std::unique_ptr<SelectNode> select_clause,
                      size_t limit,
                      std::unique_ptr<OrderByNode> order_by,
                      std::unique_ptr<GroupByNode> group_by)
     : source_(std::move(source)), 
-      join_clause_(std::move(join_clause)), 
+      join_clauses_(std::move(join_clauses)), 
       where_clause_(std::move(where_clause)), 
       select_clause_(std::move(select_clause)),
       limit_(limit),

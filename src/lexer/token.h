@@ -22,6 +22,7 @@ enum class TokenType {
     DESC,
     JOIN,
     ON,
+    LIKE,
     
     // Operators
     GREATER_THAN,

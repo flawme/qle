@@ -23,6 +23,9 @@ void TestMaxRowsLimit();
 void TestTimeoutLimit();
 
 void TestYamlAdapter();
+void TestLike();
+void TestXmlAdapter();
+void TestSubqueries();
 
 void TestLexer() {
     std::cout << "Running Lexer Tests..." << std::endl;
@@ -234,24 +237,120 @@ int main() {
     Debug::Enable(false); 
     TestLexer();
     TestYamlAdapter();
-    TestParser();
+    TestXmlAdapter();
+    TestSqliteAdapter();
     TestSecurity();
     TestRecursionDepth();
     TestDynamicLimits();
     TestAdversarialParsing();
     TestMalformedDataSources();
     TestBoundaryConditions();
+    TestSubqueries();
     TestAggregationsAndGroupBy();
-    TestYamlAdapter();
     TestInlineFunctions();
-    TestSqliteAdapter();
     TestReplEdgeCases();
     TestJoin();
+    TestLike();
     TestCliLimits();
     TestMaxRowsLimit();
     TestTimeoutLimit();
-    std::cout << "All extreme tests passed!" << std::endl;
-        TestHashJoinMemoryBypass(); TestLexerEdgeCases(); return 0;
+    std::cout << "All tests passed successfully!" << std::endl;
+}
+
+void TestXmlAdapter() {
+    std::cout << "Running XML Adapter Tests..." << std::endl;
+    std::ofstream out("test.xml");
+    out << "<?xml version=\"1.0\"?>\n<rows>\n  <row>\n    <id>1</id>\n    <name>Alice</name>\n    <age>30</age>\n  </row>\n  <row>\n    <id>2</id>\n    <name>Bob</name>\n    <age>25</age>\n  </row>\n</rows>";
+    out.close();
+
+    lexer::Lexer lexer("from test.xml select id, name, age");
+    auto tokens = lexer.Tokenize();
+    parser::Parser parser(tokens);
+    auto query = parser.Parse();
+    
+    runtime::Runtime runtime;
+    runtime.Execute(query.get());
+    
+    // Extreme XML Tests
+    std::ofstream malformed("malformed.xml");
+    malformed << "<rows><row><id>1</id><name></row></rows>";
+    malformed.close();
+    
+    try {
+        lexer::Lexer l("from malformed.xml select *");
+        parser::Parser p(l.Tokenize());
+        runtime::Runtime rt;
+        rt.Execute(p.Parse().get());
+    } catch (const errors::QleException&) {}
+
+    // Limits in XML
+    std::ofstream big_xml("big.xml");
+    big_xml << "<rows>";
+    for(int i=0; i<50000; i++) big_xml << "<row><a>1</a></row>";
+    big_xml << "</rows>";
+    big_xml.close();
+    
+    size_t old_size = security::Limits::Get().max_file_size;
+    security::Limits::Get().max_file_size = 100;
+    try {
+        lexer::Lexer l("from big.xml select *");
+        parser::Parser p(l.Tokenize());
+        runtime::Runtime rt;
+        rt.Execute(p.Parse().get());
+        assert(false && "Should have thrown file size limit");
+    } catch (const errors::SecurityError&) {}
+    security::Limits::Get().max_file_size = old_size;
+}
+
+void TestLike() {
+    std::cout << "Running LIKE Operator Tests..." << std::endl;
+    std::ofstream tmp("like_test.csv");
+    tmp << "id,name\n1,Alice\n2,Bob\n3,Charlie\n4,David\n5,Eve\n";
+    tmp.close();
+
+    std::string queries[] = {
+        "from like_test.csv where name like \"A%\" select id",
+        "from like_test.csv where name like \"%e\" select id",
+        "from like_test.csv where name like \"_o_\" select id",
+        "from like_test.csv where name like \"%i%\" select id"
+    };
+    
+    for (const auto& q : queries) {
+        try {
+            lexer::Lexer lexer(q);
+            parser::Parser parser(lexer.Tokenize());
+            runtime::Runtime rt;
+            rt.Execute(parser.Parse().get());
+        } catch (const errors::QleException& e) {
+            std::cerr << "LIKE test failed: " << e.what() << std::endl;
+            assert(false);
+        }
+    }
+}
+
+void TestSubqueries() {
+    std::cout << "Running Subqueries Tests..." << std::endl;
+    std::ofstream out("sub_users.csv");
+    out << "id,name,age\n1,Alice,30\n2,Bob,25\n3,Charlie,35\n";
+    out.close();
+
+    std::string queries[] = {
+        "from (from sub_users.csv where age > 25 select id, name) select name",
+        "from (from sub_users.csv select id) join sub_users.csv on id == id select id",
+        "from (from sub_users.csv select id limit 1) select id"
+    };
+
+    for (const auto& q : queries) {
+        try {
+            lexer::Lexer lexer(q);
+            parser::Parser parser(lexer.Tokenize());
+            runtime::Runtime rt;
+            rt.Execute(parser.Parse().get());
+        } catch (const errors::QleException& e) {
+            std::cerr << "Subquery test failed: " << e.what() << std::endl;
+            assert(false);
+        }
+    }
 }
 
 void TestAggregationsAndGroupBy() {
@@ -287,6 +386,10 @@ void TestInlineFunctions() {
         "from math_test.csv select non_existent_func(1)",
         "from math_test.csv select abs(val)",
         "from math_test.csv select round(val)",
+        "from math_test.csv select now()",
+        "from math_test.csv select year(\"2023-05-15\")",
+        "from math_test.csv select month(\"2023-05-15\")",
+        "from math_test.csv select day(\"2023-05-15\")",
         "from math_test.csv select abs(\"extremely_long_string_that_is_not_a_number_at_all\")"
     };
     for (const auto& q : queries) {

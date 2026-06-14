@@ -4,20 +4,38 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <iomanip>
+#include <sstream>
+#include <functional>
 #include "adapters/sqlite/sqlite_adapter.h"
 #include "runtime/runtime.h"
 #include "adapters/csv/csv_adapter.h"
 #include "adapters/json/json_adapter.h"
 #include "adapters/yaml/yaml_adapter.h"
+#include "adapters/xml/xml_adapter.h"
 #include "errors/errors.h"
 #include "security/limits.h"
 #include "logger/logger.h"
 #include "utils/suggestions.h"
 #include <iostream>
-#include <algorithm>
+#include <functional>
 
 namespace qle {
 namespace runtime {
+
+namespace {
+class MemoryAdapter : public adapters::IAdapter {
+public:
+    explicit MemoryAdapter(std::vector<adapters::Row> rows) : rows_(std::move(rows)), index_(0) {}
+    void Open(const std::string& source) override {}
+    void Close() override {}
+    bool HasNext() override { return index_ < rows_.size(); }
+    adapters::Row Next() override { return rows_[index_++]; }
+private:
+    std::vector<adapters::Row> rows_;
+    size_t index_;
+};
+}
 
 Runtime::Runtime()
     : rows_processed_(0), format_(utils::OutputFormat::CSV) {}
@@ -26,19 +44,33 @@ void Runtime::SetFormat(utils::OutputFormat format) {
     format_ = format;
 }
 
+std::vector<adapters::Row> Runtime::ExecuteToMemory(const ast::QueryNode* query) {
+    execute_to_memory_ = true;
+    memory_results_.clear();
+    Execute(query);
+    return std::move(memory_results_);
+}
+
 void Runtime::Execute(const ast::QueryNode* query) {
     Debug::DebugLog("Runtime starting execution");
     rows_processed_ = 0;
     start_time_ = std::chrono::steady_clock::now();
 
     const ast::SourceNode* source_node = query->GetSource();
-    std::string source_name = source_node->GetSourceName();
-
-    auto adapter = GetAdapterForSource(source_name);
-    adapter->Open(source_name);
+    std::unique_ptr<adapters::IAdapter> adapter;
+    
+    if (source_node->IsSubquery()) {
+        Runtime sub_rt;
+        auto rows = sub_rt.ExecuteToMemory(source_node->GetSubquery());
+        adapter = std::make_unique<MemoryAdapter>(std::move(rows));
+    } else {
+        std::string source_name = source_node->GetSourceName();
+        adapter = GetAdapterForSource(source_name);
+        adapter->Open(source_name);
+    }
 
     const ast::WhereNode* where_node = query->GetWhere();
-    const ast::JoinNode* join_node = query->GetJoin();
+    const std::vector<std::unique_ptr<ast::JoinNode>>& join_nodes = query->GetJoins();
     const ast::SelectNode* select_node = query->GetSelect();
     const ast::OrderByNode* order_by = query->GetOrderBy();
     const ast::GroupByNode* group_by = query->GetGroupBy();
@@ -49,11 +81,13 @@ void Runtime::Execute(const ast::QueryNode* query) {
     } else if (order_by) {
         ExecuteWithOrderBy(*adapter, select_node, where_node, order_by, limit);
     } else {
-        ExecuteStreaming(*adapter, select_node, where_node, join_node, limit);
+        ExecuteStreaming(*adapter, select_node, where_node, join_nodes, limit);
     }
 
     adapter->Close();
-    formatter_.Flush(format_);
+    if (!execute_to_memory_) {
+        formatter_.Flush(format_);
+    }
     Debug::DebugLog("Execution finished. Rows processed: " + std::to_string(rows_processed_));
 }
 
@@ -275,10 +309,12 @@ void Runtime::ExecuteWithGroupBy(adapters::IAdapter& adapter,
         SortRows(results, order_by);
     }
     
-    formatter_.PrintHeader(field_names, format_);
+    if (!execute_to_memory_) formatter_.PrintHeader(field_names, format_);
+
     size_t output_count = 0;
     for (const auto& row : results) {
-        formatter_.PrintRow(row, field_names, format_);
+        if (execute_to_memory_) memory_results_.push_back(row);
+        else formatter_.PrintRow(row, field_names, format_);
         output_count++;
         if (limit > 0 && output_count >= limit) break;
     }
@@ -286,12 +322,13 @@ void Runtime::ExecuteWithGroupBy(adapters::IAdapter& adapter,
 
 void Runtime::ExecuteStreaming(adapters::IAdapter& adapter,
                                const ast::SelectNode* select_node,
-                               const ast::WhereNode* where_node, const ast::JoinNode* join_node, size_t limit) {
+                               const ast::WhereNode* where_node, const std::vector<std::unique_ptr<ast::JoinNode>>& join_nodes, size_t limit) {
     bool header_printed = false;
     size_t output_count = 0;
     std::vector<std::string> field_names;
 
     auto process_row = [&](adapters::Row& row) {
+        if (limit > 0 && output_count >= limit) return;
         bool include_row = true;
         if (where_node) {
             include_row = EvaluateCondition(where_node->GetCondition(), row);
@@ -306,30 +343,34 @@ void Runtime::ExecuteStreaming(adapters::IAdapter& adapter,
                 }
             }
             if (!header_printed) {
-                formatter_.PrintHeader(field_names, format_);
+                if (!execute_to_memory_) formatter_.PrintHeader(field_names, format_);
                 header_printed = true;
             }
             
             if (select_node->IsWildcard()) {
-                formatter_.PrintRow(row, field_names, format_);
+                if (execute_to_memory_) memory_results_.push_back(row);
+                else formatter_.PrintRow(row, field_names, format_);
             } else {
                 adapters::Row out_row;
                 for (size_t i = 0; i < select_node->GetFields().size(); ++i) {
                     out_row[field_names[i]] = EvaluateExpression(select_node->GetFields()[i].get(), row);
                 }
-                formatter_.PrintRow(out_row, field_names, format_);
+                if (execute_to_memory_) memory_results_.push_back(out_row);
+                else formatter_.PrintRow(out_row, field_names, format_);
             }
             output_count++;
         }
     };
 
-    std::unordered_multimap<std::string, adapters::Row> join_hash_map;
-    std::vector<adapters::Row> joined_rows_fallback;
-    bool is_simple_equi_join = false;
-    std::string primary_key_name;
+    std::vector<std::unordered_multimap<std::string, adapters::Row>> join_hash_maps(join_nodes.size());
+    std::vector<std::vector<adapters::Row>> joined_rows_fallbacks(join_nodes.size());
+    std::vector<bool> is_simple_equi_joins(join_nodes.size(), false);
+    std::vector<std::string> primary_key_names(join_nodes.size());
+    std::vector<std::string> secondary_key_names(join_nodes.size());
     size_t estimated_memory = 0;
 
-    if (join_node) {
+    for (size_t i = 0; i < join_nodes.size(); ++i) {
+        const auto& join_node = join_nodes[i];
         auto joined_adapter = GetAdapterForSource(join_node->GetSource());
         joined_adapter->Open(join_node->GetSource());
 
@@ -338,13 +379,11 @@ void Runtime::ExecuteStreaming(adapters::IAdapter& adapter,
 
         if (cond->GetToken().type == lexer::TokenType::EQUALS && cond->GetLeft()->IsLiteral() && cond->GetRight()->IsLiteral()) {
             if (cond->GetLeft()->GetToken().type == lexer::TokenType::IDENTIFIER && cond->GetRight()->GetToken().type == lexer::TokenType::IDENTIFIER) {
-                is_simple_equi_join = true;
+                is_simple_equi_joins[i] = true;
                 left_id = cond->GetLeft()->GetToken().value;
                 right_id = cond->GetRight()->GetToken().value;
             }
         }
-
-        std::string secondary_key_name;
 
         while (joined_adapter->HasNext()) {
             if (rows_processed_ >= security::Limits::Get().max_rows_processed) {
@@ -354,21 +393,21 @@ void Runtime::ExecuteStreaming(adapters::IAdapter& adapter,
             rows_processed_++;
             if (rows_processed_ % 10000 == 0) CheckTimeout();
 
-            if (is_simple_equi_join) {
-                if (secondary_key_name.empty()) {
+            if (is_simple_equi_joins[i]) {
+                if (secondary_key_names[i].empty()) {
                     if (joined_row.find(left_id) != joined_row.end()) {
-                        secondary_key_name = left_id;
-                        primary_key_name = right_id;
+                        secondary_key_names[i] = left_id;
+                        primary_key_names[i] = right_id;
                     } else if (joined_row.find(right_id) != joined_row.end()) {
-                        secondary_key_name = right_id;
-                        primary_key_name = left_id;
+                        secondary_key_names[i] = right_id;
+                        primary_key_names[i] = left_id;
                     } else {
-                        secondary_key_name = left_id;
-                        primary_key_name = right_id;
+                        secondary_key_names[i] = left_id;
+                        primary_key_names[i] = right_id;
                     }
                 }
                 std::string key_val;
-                auto it = joined_row.find(secondary_key_name);
+                auto it = joined_row.find(secondary_key_names[i]);
                 if (it != joined_row.end()) {
                     key_val = it->second;
                 }
@@ -378,79 +417,81 @@ void Runtime::ExecuteStreaming(adapters::IAdapter& adapter,
                     row_memory += kv.first.capacity() + kv.second.capacity() + 64;
                 }
                 estimated_memory += row_memory;
-                if (estimated_memory > security::Limits::Get().max_memory_usage) {
-                    throw errors::SecurityError("Maximum memory limit exceeded during join.");
-                }
+                if (estimated_memory > security::Limits::Get().max_memory_usage) throw errors::SecurityError("Memory limit exceeded.");
                 
-                join_hash_map.insert({key_val, std::move(joined_row)});
+                join_hash_maps[i].insert({key_val, std::move(joined_row)});
             } else {
                 size_t row_memory = 64;
                 for (const auto& kv : joined_row) {
                     row_memory += kv.first.capacity() + kv.second.capacity() + 64;
                 }
                 estimated_memory += row_memory;
-                if (estimated_memory > security::Limits::Get().max_memory_usage) {
-                    throw errors::SecurityError("Maximum memory limit exceeded during join.");
-                }
-                
-                joined_rows_fallback.push_back(std::move(joined_row));
+                if (estimated_memory > security::Limits::Get().max_memory_usage) throw errors::SecurityError("Memory limit exceeded.");
+                joined_rows_fallbacks[i].push_back(std::move(joined_row));
             }
         }
         joined_adapter->Close();
     }
 
-    while (adapter.HasNext()) {
-        if (rows_processed_ >= security::Limits::Get().max_rows_processed) {
-            throw errors::SecurityError("Maximum row limit exceeded.");
+    std::function<void(size_t, adapters::Row)> evaluate_joins = [&](size_t join_idx, adapters::Row current_row) {
+        if (limit > 0 && output_count >= limit) return;
+        if (join_idx == join_nodes.size()) {
+            process_row(current_row);
+            return;
         }
+        
+        const auto& join_node = join_nodes[join_idx];
+        if (is_simple_equi_joins[join_idx]) {
+            std::string lookup_val;
+            auto it = current_row.find(primary_key_names[join_idx]);
+            if (it != current_row.end()) {
+                lookup_val = it->second;
+            }
+
+            auto range = join_hash_maps[join_idx].equal_range(lookup_val);
+            for (auto hash_it = range.first; hash_it != range.second; ++hash_it) {
+                adapters::Row next_row = current_row;
+                for (const auto& kv : hash_it->second) {
+                    next_row[kv.first] = kv.second;
+                }
+                if (EvaluateCondition(join_node->GetCondition(), next_row)) {
+                    evaluate_joins(join_idx + 1, std::move(next_row));
+                }
+            }
+        } else {
+            for (const auto& joined_row : joined_rows_fallbacks[join_idx]) {
+                adapters::Row next_row = current_row;
+                for (const auto& kv : joined_row) {
+                    next_row[kv.first] = kv.second;
+                }
+                if (EvaluateCondition(join_node->GetCondition(), next_row)) {
+                    evaluate_joins(join_idx + 1, std::move(next_row));
+                }
+            }
+        }
+    };
+
+    while (adapter.HasNext()) {
+        if (rows_processed_ >= security::Limits::Get().max_rows_processed) throw errors::SecurityError("Row limit exceeded.");
         adapters::Row primary_row = adapter.Next();
         rows_processed_++;
         if (rows_processed_ % 10000 == 0) CheckTimeout();
 
-        if (join_node) {
-            if (is_simple_equi_join) {
-                std::string lookup_val;
-                auto it = primary_row.find(primary_key_name);
-                if (it != primary_row.end()) {
-                    lookup_val = it->second;
-                }
-
-                auto range = join_hash_map.equal_range(lookup_val);
-                for (auto hash_it = range.first; hash_it != range.second; ++hash_it) {
-                    adapters::Row row = primary_row;
-                    for (const auto& kv : hash_it->second) {
-                        row[kv.first] = kv.second;
-                    }
-                    if (EvaluateCondition(join_node->GetCondition(), row)) {
-                        process_row(row);
-                    }
-                    if (limit > 0 && output_count >= limit) break;
-                }
-            } else {
-                for (const auto& joined_row : joined_rows_fallback) {
-                    adapters::Row row = primary_row;
-                    for (const auto& kv : joined_row) {
-                        row[kv.first] = kv.second;
-                    }
-                    if (EvaluateCondition(join_node->GetCondition(), row)) {
-                        process_row(row);
-                    }
-                    if (limit > 0 && output_count >= limit) break;
-                }
-            }
+        if (!join_nodes.empty()) {
+            evaluate_joins(0, std::move(primary_row));
         } else {
             process_row(primary_row);
         }
         if (limit > 0 && output_count >= limit) break;
     }
+    
     if (!header_printed && !select_node->IsWildcard()) {
         for (const auto& expr : select_node->GetFields()) {
             field_names.push_back(FormatExpression(expr.get()));
         }
-        formatter_.PrintHeader(field_names, format_);
+        if (!execute_to_memory_) formatter_.PrintHeader(field_names, format_);
     }
 }
-
 void Runtime::ExecuteWithOrderBy(adapters::IAdapter& adapter,
                                  const ast::SelectNode* select_node,
                                  const ast::WhereNode* where_node,
@@ -489,17 +530,20 @@ void Runtime::ExecuteWithOrderBy(adapters::IAdapter& adapter,
 
     SortRows(matching_rows, order_by);
 
-    formatter_.PrintHeader(field_names, format_);
+    if (!execute_to_memory_) formatter_.PrintHeader(field_names, format_);
+
     size_t output_count = 0;
     for (const auto& row : matching_rows) {
         if (select_node->IsWildcard()) {
-            formatter_.PrintRow(row, field_names, format_);
+            if (execute_to_memory_) memory_results_.push_back(row);
+            else formatter_.PrintRow(row, field_names, format_);
         } else {
             adapters::Row out_row;
             for (size_t i = 0; i < select_node->GetFields().size(); ++i) {
                 out_row[field_names[i]] = EvaluateExpression(select_node->GetFields()[i].get(), row);
             }
-            formatter_.PrintRow(out_row, field_names, format_);
+            if (execute_to_memory_) memory_results_.push_back(out_row);
+            else formatter_.PrintRow(out_row, field_names, format_);
         }
         output_count++;
         if (limit > 0 && output_count >= limit) break;
@@ -543,12 +587,15 @@ std::unique_ptr<adapters::IAdapter> Runtime::GetAdapterForSource(
         source.substr(source.size() - 4) == ".csv") {
         return std::make_unique<adapters::csv::CsvAdapter>();
     }
-    if ((source.size() > 5 && source.substr(source.size() - 5) == ".yaml") ||
-        (source.size() > 4 && source.substr(source.size() - 4) == ".yml")) {
+    if (source.size() > 5 &&
+        (source.substr(source.size() - 5) == ".yaml" || source.substr(source.size() - 4) == ".yml")) {
         return std::make_unique<adapters::yaml::YamlAdapter>();
     }
-    if (source.size() > 5 &&
-        source.substr(source.size() - 5) == ".json") {
+    if (source.size() > 4 &&
+        source.substr(source.size() - 4) == ".xml") {
+        return std::make_unique<adapters::xml::XmlAdapter>();
+    }
+    if (source.size() > 5 && source.substr(source.size() - 5) == ".json") {
         return std::make_unique<adapters::json::JsonAdapter>();
     }
     if (source.find(".sqlite") != std::string::npos || source.find(".db") != std::string::npos) {
@@ -577,6 +624,37 @@ bool Runtime::EvaluateCondition(const ast::ExpressionNode* expr,
 
     std::string left_val = EvaluateExpression(expr->GetLeft(), row);
     std::string right_val = EvaluateExpression(expr->GetRight(), row);
+
+    if (op == lexer::TokenType::LIKE) {
+        auto match_like = [](const std::string& text, const std::string& pattern) {
+            size_t t = 0, p = 0;
+            size_t t_len = text.length(), p_len = pattern.length();
+            size_t star_idx = std::string::npos;
+            size_t match_idx = 0;
+
+            while (t < t_len) {
+                if (p < p_len && pattern[p] == '%') {
+                    star_idx = p;
+                    match_idx = t;
+                    p++;
+                } else if (p < p_len && (pattern[p] == '_' || text[t] == pattern[p])) {
+                    t++;
+                    p++;
+                } else if (star_idx != std::string::npos) {
+                    p = star_idx + 1;
+                    match_idx++;
+                    t = match_idx;
+                } else {
+                    return false;
+                }
+            }
+            while (p < p_len && pattern[p] == '%') {
+                p++;
+            }
+            return p == p_len;
+        };
+        return match_like(left_val, right_val);
+    }
 
     try {
         double left_num = std::stod(left_val);
@@ -663,6 +741,41 @@ std::string Runtime::EvaluateExpression(const ast::ExpressionNode* expr,
             if (expr->GetArgs().size() != 1) throw errors::RuntimeError("round() requires 1 argument", t.line, t.col);
             std::string val = EvaluateExpression(expr->GetArgs()[0].get(), row);
             try { return std::to_string(std::round(std::stod(val))); } catch(...) { throw errors::RuntimeError("Invalid argument for round(): " + val, t.line, t.col); }
+        } else if (func_name == "now") {
+            if (expr->GetArgs().size() != 0) throw errors::RuntimeError("now() requires 0 arguments", t.line, t.col);
+            auto now = std::chrono::system_clock::now();
+            auto time_t_now = std::chrono::system_clock::to_time_t(now);
+            std::stringstream ss;
+            ss << std::put_time(std::gmtime(&time_t_now), "%Y-%m-%dT%H:%M:%SZ");
+            return ss.str();
+        } else if (func_name == "year") {
+            if (expr->GetArgs().size() != 1) throw errors::RuntimeError("year() requires 1 argument", t.line, t.col);
+            std::string val = EvaluateExpression(expr->GetArgs()[0].get(), row);
+            std::tm tm = {};
+            std::stringstream ss(val);
+            ss >> std::get_time(&tm, "%Y-%m-%d");
+            if (ss.fail()) throw errors::RuntimeError("Invalid date format for year(): " + val, t.line, t.col);
+            return std::to_string(tm.tm_year + 1900);
+        } else if (func_name == "month") {
+            if (expr->GetArgs().size() != 1) throw errors::RuntimeError("month() requires 1 argument", t.line, t.col);
+            std::string val = EvaluateExpression(expr->GetArgs()[0].get(), row);
+            std::tm tm = {};
+            std::stringstream ss(val);
+            ss >> std::get_time(&tm, "%Y-%m-%d");
+            if (ss.fail()) throw errors::RuntimeError("Invalid date format for month(): " + val, t.line, t.col);
+            std::stringstream res;
+            res << std::setfill('0') << std::setw(2) << (tm.tm_mon + 1);
+            return res.str();
+        } else if (func_name == "day") {
+            if (expr->GetArgs().size() != 1) throw errors::RuntimeError("day() requires 1 argument", t.line, t.col);
+            std::string val = EvaluateExpression(expr->GetArgs()[0].get(), row);
+            std::tm tm = {};
+            std::stringstream ss(val);
+            ss >> std::get_time(&tm, "%Y-%m-%d");
+            if (ss.fail()) throw errors::RuntimeError("Invalid date format for day(): " + val, t.line, t.col);
+            std::stringstream res;
+            res << std::setfill('0') << std::setw(2) << tm.tm_mday;
+            return res.str();
         }
         
         // Aggregate function used outside aggregate context, just return an empty string or evaluate the inner part?
