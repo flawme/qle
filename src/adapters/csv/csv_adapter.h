@@ -19,14 +19,14 @@ public:
     void Close() override;
 
 private:
-    std::ifstream file_;
+    int fd_;
+    char* mmap_data_;
+    size_t mmap_size_;
+    size_t offset_;
+    
     std::vector<std::string> headers_;
-    std::string next_line_;
-    bool has_next_;
 
     void ReadHeaders();
-    void FetchNextLine();
-    std::vector<std::string> ParseLine(const std::string& line);
 };
 
 } // namespace csv
