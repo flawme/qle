@@ -19,7 +19,9 @@ public:
     void Close() override;
 
 private:
-    std::string content_;
+    int fd_;
+    char* mmap_data_;
+    size_t mmap_size_;
     size_t pos_;
     bool is_open_;
     

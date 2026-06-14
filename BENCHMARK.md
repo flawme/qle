@@ -2,31 +2,31 @@
 
 ## Test Environment
 
-- **CPU:** AMD Ryzen 7 7445HS w/ Radeon 740M Graphics
-- **RAM:** 14Gi
-- **OS:** Linux 6.17.0-35-generic
+- **CPU:** AMD Ryzen 7 7445HS w/ Radeon 740M Graphics (12 Cores)
+- **RAM:** 14 GB
+- **OS:** Linux Mint 22.3 (Zena)
 - **Dataset Size:** 100,000 rows per primary file
 
 ## Results
 
 | Feature Category | Test Case | Query | Execution Time |
 |-----------------|-----------|-------|----------------|
-| Adapters | CSV Parsing | `from bench.csv select count(id)` | **233 ms** |
-| Adapters | JSON Parsing | `from bench.json select count(id)` | **386 ms** |
-| Adapters | SQLite Parsing | `from bench.sqlite select count(id)` | **404 ms** |
-| Adapters | XML Parsing | `from bench.xml select count(id)` | **563 ms** |
-| Operations | Filtering (Numeric) | `from bench.csv where age > 50 select count(id)` | **269 ms** |
-| Operations | Filtering (String) | `from bench.csv where name == "User50000" select count(id)` | **439 ms** |
-| Operations | LIKE Pattern | `from bench.csv where name like "User1%0" select count(id)` | **222 ms** |
-| Aggregations | GROUP BY + SUM | `from bench.csv group by age select sum(score)` | **377 ms** |
-| Aggregations | GROUP BY + MIN/MAX | `from bench.csv group by age select min(score), max(score)` | **386 ms** |
+| Adapters | CSV Parsing | `from bench.csv select count(id)` | **231 ms** |
+| Adapters | JSON Parsing | `from bench.json select count(id)` | **288 ms** |
+| Adapters | SQLite Parsing | `from bench.sqlite select count(id)` | **268 ms** |
+| Adapters | XML Parsing | `from bench.xml select count(id)` | **391 ms** |
+| Operations | Filtering (Numeric) | `from bench.csv where age > 50 select count(id)` | **242 ms** |
+| Operations | Filtering (String) | `from bench.csv where name == "User50000" select count(id)` | **210 ms** |
+| Operations | LIKE Pattern | `from bench.csv where name like "User1%0" select count(id)` | **221 ms** |
+| Aggregations | GROUP BY + SUM | `from bench.csv group by age select sum(score)` | **310 ms** |
+| Aggregations | GROUP BY + MIN/MAX | `from bench.csv group by age select min(score), max(score)` | **330 ms** |
 | Sorting | ORDER BY (Numeric) | `from bench.csv order by score desc limit 10` | **0 ms** |
 | Sorting | ORDER BY (String) | `from bench.csv order by name asc limit 10` | **0 ms** |
-| Functions | String Functions | `from bench.csv select upper(name), concat(name, age) limit 1000` | **14 ms** |
-| Functions | Math Functions | `from bench.csv select abs(score), round(age) limit 1000` | **8 ms** |
-| Functions | Date Functions | `from bench.csv select now(), year(date), month(date) limit 1000` | **11 ms** |
-| Advanced | Subqueries | `from (from bench.csv where age > 80 select id, name) select count(id)` | **281 ms** |
-| Advanced | Multiple Hash Joins | `from join1.csv join join2.csv on id == id join join3.csv on id == id select count(id)` | **16 ms** |
+| Functions | String Functions | `from bench.csv select upper(name), concat(name, age) limit 1000` | **6 ms** |
+| Functions | Math Functions | `from bench.csv select abs(score), round(age) limit 1000` | **7 ms** |
+| Functions | Date Functions | `from bench.csv select now(), year(date), month(date) limit 1000` | **15 ms** |
+| Advanced | Subqueries | `from (from bench.csv where age > 80 select id, name) select count(id)` | **249 ms** |
+| Advanced | Multiple Hash Joins | `from join1.csv join join2.csv on id == id join join3.csv on id == id select count(id)` | **15 ms** |
 
 # Comparative Benchmarks: QLE vs Established Tools
 

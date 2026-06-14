@@ -8,7 +8,39 @@
 namespace qle {
 namespace adapters {
 
-using Row = std::map<std::string, std::string>;
+class Row {
+public:
+    std::vector<std::pair<std::string, std::string>> data;
+
+    std::string& operator[](const std::string& key) {
+        for (auto& pair : data) {
+            if (pair.first == key) return pair.second;
+        }
+        data.push_back({key, ""});
+        return data.back().second;
+    }
+    
+    auto find(const std::string& key) const {
+        for (auto it = data.begin(); it != data.end(); ++it) {
+            if (it->first == key) return it;
+        }
+        return data.end();
+    }
+    
+    auto find(const std::string& key) {
+        for (auto it = data.begin(); it != data.end(); ++it) {
+            if (it->first == key) return it;
+        }
+        return data.end();
+    }
+    
+    auto end() const { return data.end(); }
+    auto begin() const { return data.begin(); }
+    auto end() { return data.end(); }
+    auto begin() { return data.begin(); }
+    size_t size() const { return data.size(); }
+    void clear() { data.clear(); }
+};
 
 class IAdapter {
 public:

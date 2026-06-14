@@ -1,4 +1,13 @@
 #include <unordered_map>
+#include <string>
+#include <cstdlib>
+
+static bool TryParseDouble(const std::string& str, double& out_val) {
+    if (str.empty()) return false;
+    char* endptr = nullptr;
+    out_val = std::strtod(str.c_str(), &endptr);
+    return endptr != str.c_str() && *endptr == '\0';
+}
 #include <limits>
 #include <map>
 #include <algorithm>
@@ -167,13 +176,12 @@ std::string Runtime::EvaluateAggregate(const ast::ExpressionNode* expr, const st
             
             for (const auto& row : bucket) {
                 std::string val_str = EvaluateExpression(arg, row);
-                try {
-                    double val = std::stod(val_str);
+                double val;
+                if (TryParseDouble(val_str, val)) {
                     sum += val;
                     if (val < min_val) min_val = val;
                     if (val > max_val) max_val = val;
                     has_val = true;
-                } catch(...) {
                 }
             }
             
@@ -225,11 +233,11 @@ std::string Runtime::EvaluateAggregate(const ast::ExpressionNode* expr, const st
             } else if (func_name == "abs") {
                 if (expr->GetArgs().size() != 1) throw errors::RuntimeError("abs() requires 1 argument", t.line, t.col);
                 std::string val = EvaluateAggregate(expr->GetArgs()[0].get(), bucket);
-                try { return std::to_string(std::abs(std::stod(val))); } catch(...) { throw errors::RuntimeError("Invalid argument for abs(): " + val, t.line, t.col); }
+                double num; if (TryParseDouble(val, num)) { return std::to_string(std::abs(num)); } throw errors::RuntimeError("Invalid argument for abs(): " + val, t.line, t.col);
             } else if (func_name == "round") {
                 if (expr->GetArgs().size() != 1) throw errors::RuntimeError("round() requires 1 argument", t.line, t.col);
                 std::string val = EvaluateAggregate(expr->GetArgs()[0].get(), bucket);
-                try { return std::to_string(std::round(std::stod(val))); } catch(...) { throw errors::RuntimeError("Invalid argument for round(): " + val, t.line, t.col); }
+                double num; if (TryParseDouble(val, num)) { return std::to_string(std::round(num)); } throw errors::RuntimeError("Invalid argument for round(): " + val, t.line, t.col);
             }
             throw errors::RuntimeError("Unsupported function in aggregate context", t.line, t.col);
         }
@@ -570,13 +578,11 @@ void Runtime::SortRows(std::vector<adapters::Row>& rows, const ast::OrderByNode*
             std::string val_a = (it_a != a.end()) ? it_a->second : "";
             std::string val_b = (it_b != b.end()) ? it_b->second : "";
 
-            try {
-                double num_a = std::stod(val_a);
-                double num_b = std::stod(val_b);
+            double num_a, num_b;
+            if (TryParseDouble(val_a, num_a) && TryParseDouble(val_b, num_b)) {
                 return descending ? (num_a > num_b) : (num_a < num_b);
-            } catch (...) {
-                return descending ? (val_a > val_b) : (val_a < val_b);
             }
+            return descending ? (val_a > val_b) : (val_a < val_b);
         });
 }
 
@@ -658,10 +664,8 @@ bool Runtime::EvaluateCondition(const ast::ExpressionNode* expr,
         return match_like(left_val, right_val);
     }
 
-    try {
-        double left_num = std::stod(left_val);
-        double right_num = std::stod(right_val);
-
+    double left_num, right_num;
+    if (TryParseDouble(left_val, left_num) && TryParseDouble(right_val, right_num)) {
         switch (op) {
             case lexer::TokenType::EQUALS:         return left_num == right_num;
             case lexer::TokenType::NOT_EQUALS:      return left_num != right_num;
@@ -671,7 +675,8 @@ bool Runtime::EvaluateCondition(const ast::ExpressionNode* expr,
             case lexer::TokenType::LESS_EQUALS:     return left_num <= right_num;
             default: break;
         }
-    } catch (...) {
+    }
+    {
         switch (op) {
             case lexer::TokenType::EQUALS:         return left_val == right_val;
             case lexer::TokenType::NOT_EQUALS:      return left_val != right_val;
