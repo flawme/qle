@@ -97,14 +97,14 @@ def main():
     md.append("|-----------------|-----------|-------|----------------|")
 
     tests = [
-        ("Adapters", "CSV Parsing", f"from bench.csv select count"),
-        ("Adapters", "JSON Parsing", f"from bench.json select count"),
-        ("Adapters", "SQLite Parsing", f"from bench.sqlite select count"),
-        ("Adapters", "XML Parsing", f"from bench.xml select count"),
+        ("Adapters", "CSV Parsing", f"from bench.csv select count(id)"),
+        ("Adapters", "JSON Parsing", f"from bench.json select count(id)"),
+        ("Adapters", "SQLite Parsing", f"from bench.sqlite select count(id)"),
+        ("Adapters", "XML Parsing", f"from bench.xml select count(id)"),
         
-        ("Operations", "Filtering (Numeric)", f"from bench.csv where age > 50 select count"),
-        ("Operations", "Filtering (String)", f"from bench.csv where name == \"User50000\" select count"),
-        ("Operations", "LIKE Pattern", f"from bench.csv where name like \"User1%0\" select count"),
+        ("Operations", "Filtering (Numeric)", f"from bench.csv where age > 50 select count(id)"),
+        ("Operations", "Filtering (String)", f"from bench.csv where name == \"User50000\" select count(id)"),
+        ("Operations", "LIKE Pattern", f"from bench.csv where name like \"User1%0\" select count(id)"),
         
         ("Aggregations", "GROUP BY + SUM", f"from bench.csv group by age select sum(score)"),
         ("Aggregations", "GROUP BY + MIN/MAX", f"from bench.csv group by age select min(score), max(score)"),
@@ -116,8 +116,8 @@ def main():
         ("Functions", "Math Functions", f"from bench.csv select abs(score), round(age) limit 1000"),
         ("Functions", "Date Functions", f"from bench.csv select now(), year(date), month(date) limit 1000"),
         
-        ("Advanced", "Subqueries", f"from (from bench.csv where age > 80 select id, name) select count"),
-        ("Advanced", "Multiple Hash Joins", f"from join1.csv join join2.csv on id == id join join3.csv on id == id select count"),
+        ("Advanced", "Subqueries", f"from (from bench.csv where age > 80 select id, name) select count(id)"),
+        ("Advanced", "Multiple Hash Joins", f"from join1.csv join join2.csv on id == id join join3.csv on id == id select count(id)"),
     ]
     
     for category, name, query in tests:
