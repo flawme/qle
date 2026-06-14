@@ -22,7 +22,7 @@ void Runtime::ExecuteWithGroupBy(adapters::IAdapter& adapter,
                                  const ast::SelectNode* select_node,
                                  const ast::WhereNode* where_node,
                                  const ast::GroupByNode* group_by,
-                                 const ast::OrderByNode* order_by, size_t limit) {
+                                 const ast::OrderByNode* order_by, size_t limit, const ast::QueryNode* query) {
     std::vector<const ast::ExpressionNode*> agg_exprs;
     CollectAggregates(select_node, agg_exprs);
 
@@ -148,6 +148,9 @@ void Runtime::ExecuteWithGroupBy(adapters::IAdapter& adapter,
     std::vector<adapters::Row> results;
     for (const auto& key : order) {
         const auto& state = buckets[key];
+        if (query && query->GetHaving() && !EvaluateHavingCondition(query->GetHaving()->GetCondition(), state, key)) {
+            continue;
+        }
         adapters::Row res_row;
         if (select_node->IsWildcard()) {
             res_row = state.first_row;

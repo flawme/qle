@@ -37,6 +37,7 @@ private:
     bool EvaluateCondition(const ast::ExpressionNode* expr, const adapters::Row& row);
     std::string EvaluateExpression(const ast::ExpressionNode* expr, const adapters::Row& row);
     std::string EvaluateAggregate(const ast::ExpressionNode* expr, const AggState& state);
+    bool EvaluateHavingCondition(const ast::ExpressionNode* condition, const AggState& agg, const std::string& group_val);
 
     std::vector<std::string> ResolveWildcard(const adapters::Row& row);
     void SortRows(std::vector<adapters::Row>& rows, const ast::OrderByNode* order_by);
@@ -55,7 +56,7 @@ private:
                             const ast::SelectNode* select_node,
                             const ast::WhereNode* where_node,
                             const ast::GroupByNode* group_by,
-                            const ast::OrderByNode* order_by, size_t limit);
+                            const ast::OrderByNode* order_by, size_t limit, const ast::QueryNode* query);
 
     std::string FormatExpression(const ast::ExpressionNode* expr);
     std::string EvaluateAggregate(const ast::ExpressionNode* expr, const std::vector<adapters::Row>& bucket);
@@ -70,6 +71,7 @@ private:
     utils::Formatter formatter_;
     bool execute_to_memory_ = false;
     std::vector<adapters::Row> memory_results_;
+    std::unordered_map<std::string, std::vector<adapters::Row>> ctes_;
 };
 
 } // namespace runtime

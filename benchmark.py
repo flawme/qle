@@ -4,7 +4,7 @@ import platform
 import time
 import sqlite3
 
-ROWS = 100000
+ROWS = 1000000
 
 def generate_data():
     print("Generating data...")
@@ -117,6 +117,8 @@ def main():
         ("Functions", "Date Functions", f"from bench.csv select now(), year(date), month(date) limit 1000"),
         
         ("Advanced", "Subqueries", f"from (from bench.csv where age > 80 select id, name) select count(id)"),
+        ("Advanced", "CTE (WITH)", f"with OldUsers as (from bench.csv where age > 80) from OldUsers select count(id)"),
+        ("Advanced", "HAVING Clause", f"from bench.csv group by age having sum(score) > 50000 select min(score)"),
         ("Advanced", "Multiple Hash Joins", f"from join1.csv join join2.csv on id == id join join3.csv on id == id select count(id)"),
     ]
     

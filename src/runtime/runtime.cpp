@@ -57,11 +57,20 @@ void Runtime::Execute(const ast::QueryNode* query) {
     rows_processed_ = 0;
     start_time_ = std::chrono::steady_clock::now();
 
+    // Execute CTEs
+    for (const auto& with_node : query->GetWithClauses()) {
+        Runtime sub_rt;
+        sub_rt.ctes_ = this->ctes_; // Inherit current CTEs
+        auto rows = sub_rt.ExecuteToMemory(with_node->GetQuery());
+        this->ctes_[with_node->GetAlias()] = std::move(rows);
+    }
+
     const ast::SourceNode* source_node = query->GetSource();
     std::unique_ptr<adapters::IAdapter> adapter;
     
     if (source_node->IsSubquery()) {
         Runtime sub_rt;
+        sub_rt.ctes_ = this->ctes_;
         auto rows = sub_rt.ExecuteToMemory(source_node->GetSubquery());
         adapter = std::make_unique<MemoryAdapter>(std::move(rows));
     } else {
@@ -78,7 +87,7 @@ void Runtime::Execute(const ast::QueryNode* query) {
     size_t limit = query->GetLimit();
 
     if (group_by || HasAggregate(select_node)) {
-        ExecuteWithGroupBy(*adapter, select_node, where_node, group_by, order_by, limit);
+        ExecuteWithGroupBy(*adapter, select_node, where_node, group_by, order_by, limit, query);
     } else if (order_by) {
         ExecuteWithOrderBy(*adapter, select_node, where_node, order_by, limit);
     } else {
@@ -103,6 +112,10 @@ std::vector<std::string> Runtime::ResolveWildcard(const adapters::Row& row) {
 
 std::unique_ptr<adapters::IAdapter> Runtime::GetAdapterForSource(
     const std::string& source) {
+    auto it = ctes_.find(source);
+    if (it != ctes_.end()) {
+        return std::make_unique<MemoryAdapter>(it->second);
+    }
     if (source.size() > 4 &&
         source.substr(source.size() - 4) == ".csv") {
         return std::make_unique<adapters::csv::CsvAdapter>();

@@ -200,6 +200,28 @@ std::string Runtime::EvaluateAggregate(const ast::ExpressionNode* expr, const Ag
     throw errors::RuntimeError("Complex binary operators not supported in aggregates", expr->GetToken().line, expr->GetToken().col);
 }
 
+
+bool Runtime::EvaluateHavingCondition(const ast::ExpressionNode* condition, const AggState& agg, const std::string& group_val) {
+    if (!condition) return true;
+    adapters::Row row = agg.first_row;
+    
+    row["count(*)"] = std::to_string(agg.count);
+    row["count(1)"] = std::to_string(agg.count);
+    
+    for (const auto& kv : agg.sums) {
+        row["sum(" + FormatExpression(kv.first) + ")"] = std::to_string(kv.second);
+        row["avg(" + FormatExpression(kv.first) + ")"] = std::to_string(kv.second / agg.count);
+    }
+    for (const auto& kv : agg.mins) {
+        row["min(" + FormatExpression(kv.first) + ")"] = std::to_string(kv.second);
+    }
+    for (const auto& kv : agg.maxs) {
+        row["max(" + FormatExpression(kv.first) + ")"] = std::to_string(kv.second);
+    }
+    
+    return EvaluateCondition(condition, row);
+}
+
 bool Runtime::EvaluateCondition(const ast::ExpressionNode* expr,
                                 const adapters::Row& row) {
     if (expr->IsLiteral()) {
@@ -283,6 +305,10 @@ bool Runtime::EvaluateCondition(const ast::ExpressionNode* expr,
 
 std::string Runtime::EvaluateExpression(const ast::ExpressionNode* expr,
                                         const adapters::Row& row) {
+    std::string formatted = FormatExpression(expr);
+    auto it = row.find(formatted);
+    if (it != row.end()) return it->second;
+
     if (expr->IsLiteral()) {
         const lexer::Token& t = expr->GetToken();
         if (t.type == lexer::TokenType::STRING ||
