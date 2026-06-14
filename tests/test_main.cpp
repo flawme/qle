@@ -26,6 +26,7 @@ void TestYamlAdapter();
 void TestLike();
 void TestXmlAdapter();
 void TestSubqueries();
+void TestAdversarialNewFeatures();
 
 void TestLexer() {
     std::cout << "Running Lexer Tests..." << std::endl;
@@ -246,6 +247,7 @@ int main() {
     TestMalformedDataSources();
     TestBoundaryConditions();
     TestSubqueries();
+    TestAdversarialNewFeatures();
     TestAggregationsAndGroupBy();
     TestInlineFunctions();
     TestReplEdgeCases();
@@ -326,6 +328,69 @@ void TestLike() {
             assert(false);
         }
     }
+}
+
+
+void TestAdversarialNewFeatures() {
+    std::cout << "Running Adversarial Tests for New Features..." << std::endl;
+    { std::ofstream out("empty.json"); out << "[]"; out.close(); }
+
+    // 1. LIKE ReDoS / hanging pattern test
+    std::string text(500, 'a');
+    std::string pattern = "%";
+    for(int i=0; i<400; i++) pattern += "a";
+    pattern += "b";
+    std::string like_query = "from users.csv where \"" + text + "\" like \"" + pattern + "\" select id";
+    bool like_caught = false;
+    try {
+        qle::lexer::Lexer lexer(like_query);
+        qle::parser::Parser parser(lexer.Tokenize());
+        qle::runtime::Runtime rt;
+        rt.Execute(parser.Parse().get());
+    } catch (const qle::errors::SecurityError&) {
+        like_caught = true;
+    }
+    assert(like_caught && "LIKE ReDoS should throw SecurityError");
+
+    // 2. Date parser with potentially dangerous large inputs (UB on overflow)
+    std::string date_query = "from users.csv where year(\"2147483647-01-01\") == \"2147485547\" select id";
+    try {
+        qle::lexer::Lexer lexer(date_query);
+        qle::parser::Parser parser(lexer.Tokenize());
+        qle::runtime::Runtime rt;
+        rt.Execute(parser.Parse().get());
+    } catch (const qle::errors::QleException&) {}
+
+    // 3. Subqueries recursive infinite loops test
+    std::string sub_query = "from ";
+    for (int i = 0; i < 200; ++i) {
+        sub_query += "(from ";
+    }
+    sub_query += "users.csv select id";
+    for (int i = 0; i < 200; ++i) {
+        sub_query += ") select id";
+    }
+    bool sub_caught = false;
+    try {
+        qle::lexer::Lexer lexer(sub_query);
+        qle::parser::Parser parser(lexer.Tokenize());
+        parser.Parse();
+    } catch (const qle::errors::SecurityError&) {
+        sub_caught = true;
+    }
+    assert(sub_caught && "Deeply nested subqueries should throw SecurityError due to max recursion depth");
+    
+    // 4. XML adapter infinite depth / unclosed tags test
+    std::ofstream malformed_xml("deep.xml");
+    malformed_xml << "<rows><row>";
+    for (int i = 0; i < 100; i++) malformed_xml << "<col>";
+    malformed_xml.close();
+    try {
+        qle::lexer::Lexer lexer("from deep.xml select *");
+        qle::parser::Parser parser(lexer.Tokenize());
+        qle::runtime::Runtime rt;
+        rt.Execute(parser.Parse().get());
+    } catch (const qle::errors::QleException&) {}
 }
 
 void TestSubqueries() {

@@ -631,8 +631,10 @@ bool Runtime::EvaluateCondition(const ast::ExpressionNode* expr,
             size_t t_len = text.length(), p_len = pattern.length();
             size_t star_idx = std::string::npos;
             size_t match_idx = 0;
+            size_t steps = 0;
 
             while (t < t_len) {
+                if (++steps > 10000) throw errors::SecurityError("LIKE operation time limit exceeded");
                 if (p < p_len && pattern[p] == '%') {
                     star_idx = p;
                     match_idx = t;
@@ -755,7 +757,8 @@ std::string Runtime::EvaluateExpression(const ast::ExpressionNode* expr,
             std::stringstream ss(val);
             ss >> std::get_time(&tm, "%Y-%m-%d");
             if (ss.fail()) throw errors::RuntimeError("Invalid date format for year(): " + val, t.line, t.col);
-            return std::to_string(tm.tm_year + 1900);
+            long long year_val = static_cast<long long>(tm.tm_year) + 1900;
+            return std::to_string(year_val);
         } else if (func_name == "month") {
             if (expr->GetArgs().size() != 1) throw errors::RuntimeError("month() requires 1 argument", t.line, t.col);
             std::string val = EvaluateExpression(expr->GetArgs()[0].get(), row);

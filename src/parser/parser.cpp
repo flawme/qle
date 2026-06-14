@@ -131,6 +131,7 @@ void Parser::TrackNodeCreation() {
 }
 
 std::unique_ptr<ast::SourceNode> Parser::ParseFrom() {
+    RecursionGuard guard(this);
     if (Match({lexer::TokenType::LEFT_PAREN})) {
         auto subquery = Parse();
         Consume(lexer::TokenType::RIGHT_PAREN, "Expect ')' after subquery.");
