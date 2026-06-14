@@ -2,9 +2,9 @@
 
 ## Test Environment
 
-- **CPU:** AMD Ryzen 7 7445HS w/ Radeon 740M Graphics
-- **RAM:** 14Gi
-- **OS:** Linux 6.17.0-35-generic
+- **CPU:** AMD Ryzen 7 7445HS w/ Radeon 740M Graphics (12 Cores)
+- **RAM:** 14 GB
+- **OS:** Linux Mint 22.3 (Zena)
 - **Dataset Size:** 100,000 rows per primary file
 
 ## Results
