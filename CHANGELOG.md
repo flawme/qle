@@ -1,5 +1,11 @@
 # QLE Changelog
 
+## [v0.1.9] - 2026-06-14
+
+### Added
+- **CTEs (`WITH` Clauses):** Added support for Common Table Expressions. Virtual tables defined with `WITH` are instantly compiled into $O(1)$ zero-copy `MemoryAdapters` before execution.
+- **`HAVING` Clauses:** Native support for post-aggregation filtering. Integrates directly into the incremental map-reduce engine to drop groups efficiently without re-calculating outputs.
+
 ## [v0.1.8] - 2026-06-14
 
 ### Added
