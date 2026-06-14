@@ -1,0 +1,7 @@
+id,val
+1,10.5
+2,-5.2
+3,inf
+4,nan
+5,1e1000
+6,not_a_number
