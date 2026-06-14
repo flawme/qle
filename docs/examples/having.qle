@@ -1,0 +1,5 @@
+from orders.csv
+group by user_id
+having sum(price) > 100
+select user_id, count, sum(price)
+order by sum(price) desc

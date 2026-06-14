@@ -1,0 +1,9 @@
+with active_users as (
+  from users.csv
+  where length(name) > 0
+  select id, name
+)
+from active_users
+join orders.csv on id == user_id
+select name, item, price
+order by price desc
