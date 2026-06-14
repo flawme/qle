@@ -21,7 +21,7 @@ The AST nodes are lightweight and strictly immutable after construction.
 - `ExpressionNode`: Represents binary operations, string matching (`LIKE`), or literal values.
 
 ## 4. Runtime (`src/runtime`)
-The Runtime executes the AST. It handles filtering, evaluating inline functions (`upper`, `abs`, etc.), grouping data via the `group by` clause, sorting rows based on `OrderByNode`, and performing multi-file hash joins.
+The Runtime executes the AST. The monolithic `runtime.cpp` was recently decoupled into 5 separate component files (`evaluator.cpp`, `executor_streaming.cpp`, `executor_groupby.cpp`, `executor_orderby.cpp`, `runtime.cpp`). It handles filtering, evaluating inline functions (`upper`, `abs`, etc.), grouping data via the `group by` clause (using Map-Reduce parallel execution), sorting rows based on `OrderByNode`, and performing multi-file hash joins.
 
 ## 5. Adapters (`src/adapters`)
 Data extraction is entirely decoupled from the runtime. Adapters implement the `IAdapter` interface, guaranteeing `Open()`, `HasNext()`, `Next()`, and `Close()` functionality. Supported formats are:
