@@ -9,6 +9,13 @@
 - **Date & Time Engine:** Added `<chrono>` powered `now()`, `year()`, `month()`, and `day()` extraction inline functions.
 - **Native XML Adapter:** Added a completely zero-dependency streaming recursive XML adapter to parse massive tree datasets securely.
 
+### Fixed & Optimized
+- **Subqueries Stack Overflow**: Applied the internal AST `RecursionGuard` to `ParseFrom()` to prevent segfaults when nesting hundreds of subqueries.
+- **LIKE ReDoS Hangs**: The wildcard engine is now capped to 10,000 internal steps, guaranteeing instantaneous rejection of infinitely hanging adversarial pattern payloads.
+- **Date UB Overflows**: Sandboxed integer overflow limits inside the `<chrono>` parsing engine to prevent crashes on out-of-bounds `year()` epochs.
+- **Zero-Copy Improvements**: Hand-optimized the `$O(1)` Multiple Join fallback logic and Subquery `MemoryAdapter` arrays using `std::move` bindings, eliminating all excessive `std::map` duplications in recursive engines.
+- **XML Speed Buffs**: Substituted char-by-char evaluations in the XML streaming adapter with highly optimized `std::getline` mapping.
+
 ## [v0.1.6] - 2026-06-13
 
 ### Changed

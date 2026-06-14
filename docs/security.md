@@ -12,8 +12,10 @@ QLE dynamically enforces the following caps at runtime:
 - **Maximum AST Nodes (50,000)**: Rejects excessively complex logic trees.
 - **Maximum Rows Processed (1,000,000)**: Protects the system from unbounded loops during processing.
 - **Maximum String Length (8,192 characters)**: Protects against runaway string allocations.
-- **Maximum Recursion Depth (128)**: A `RecursionGuard` inside the Parser prevents C++ stack overflow vulnerabilities caused by heavily nested parentheses.
+- **Maximum Recursion Depth (128)**: A `RecursionGuard` inside the Parser prevents C++ stack overflow vulnerabilities caused by heavily nested parentheses and infinite nested Subqueries.
 - **Strict Hash-Join Caps**: The `std::unordered_multimap` used for `JOIN` logic precisely estimates string capacities and violently throws memory cap exceptions if overloaded.
+- **LIKE Execution Limit**: The regex-style wildcard engine uses a strict `10,000` execution step timeout to completely protect against ReDoS (Regular Expression Denial of Service) hangs.
+- **Time/Epoch UB Overflow Bounds**: The `year()`, `month()`, and `day()` parsers securely catch malformed `YYYY` string inputs to prevent `<chrono>` epoch math integer overflows.
 
 ## Exception Safety
 

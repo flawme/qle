@@ -24,7 +24,7 @@ ctest --output-on-failure
 
 ## Creating New Adapters
 
-QLE is designed to easily expand. To add a new data source format (e.g., Parquet, XML):
+QLE is designed to easily expand. To add a new data source format (e.g., Parquet, Protobuf):
 
 1. **Implement `IAdapter`**: Create a new class inheriting from `qle::adapters::IAdapter`.
 2. **Implement Methods**: 
