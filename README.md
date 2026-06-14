@@ -17,7 +17,8 @@ A lightweight, interpreted query language for querying multiple data sources usi
 
 - [Usage Guide](docs/usage.md): Learn the QLE syntax, inline functions, and CLI limits.
 - [Architecture](docs/architecture.md): Explore the engine's modular adapters and AST.
-- [Performance & Optimization](docs/performance.md): Deep dive into the zero-copy engine, memory streaming, and big-data optimization strategies.
+- [Performance Guide](docs/performance.md): Deep dive into the zero-copy engine, memory streaming, and big-data optimization strategies.
+- **[Comprehensive Benchmarks](BENCHMARK.md)**: Hardware metrics and execution times across all 16 features.
 - [Examples Library](docs/examples/README.md): Explore ready-to-run `.qle` files demonstrating joins, maths, and aggregations.
 
 ## Build
