@@ -17,10 +17,12 @@ You will be dropped into a live `qle > ` prompt where you can execute queries an
 A valid QLE query requires a `from` and a `select` clause. The `where`, `group by`, `order by`, and `limit` clauses are optional.
 
 ```text
+[with <alias> as (query), ...]
 from <source_file | (subquery)>
 [join <source_file2> on <condition> ...]
 [where <condition>]
 [group by <field>]
+[having <condition>]
 select <field1, field2 | * | count | sum(field) | avg(field) | min(field) | max(field)>
 [order by <field> [asc|desc]]
 [limit <number>]

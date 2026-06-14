@@ -11,6 +11,7 @@ QLE is a lightweight, interpreted query language designed to allow developers to
 - **Incremental Aggregation:** `sum`, `count`, `min`, `max` process inline during streaming, completely eliminating row-caching memory footprints (10M row RAM usage is just 4.5 MB).
 - **Projection Pushdown:** Columns not needed by the AST are skipped entirely at the parser level via read-masks, improving parse speeds dramatically (10M row queries in 3.7 seconds).
 - **Modular Engine Architecture:** The monolithic `runtime.cpp` was decoupled into 5 separate component files (`evaluator.cpp`, `executor_streaming.cpp`, etc.).
+- **Common Table Expressions & Post-Aggregation Filters:** Native support for `WITH` clauses mapped to `$O(1)` memory adapters, and `HAVING` filters applied instantly after incremental aggregation.
 
 ## Table of Contents
 
