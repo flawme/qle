@@ -149,6 +149,9 @@ Token Lexer::ReadIdentifierOrKeyword() {
     if (lower_val == "on") return {TokenType::ON, lower_val, start_line, start_col};
     if (lower_val == "like") return {TokenType::LIKE, lower_val, start_line, start_col};
     if (lower_val == "into") return {TokenType::INTO, lower_val, start_line, start_col};
+    if (lower_val == "recursive") return {TokenType::RECURSIVE, lower_val, start_line, start_col};
+    if (lower_val == "union") return {TokenType::UNION, lower_val, start_line, start_col};
+    if (lower_val == "all") return {TokenType::ALL, lower_val, start_line, start_col};
     if (lower_val == "and") return {TokenType::AND, lower_val, start_line, start_col};
     if (lower_val == "or") return {TokenType::OR, lower_val, start_line, start_col};
 

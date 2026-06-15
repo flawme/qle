@@ -27,6 +27,9 @@ enum class TokenType {
     ON,
     LIKE,
     INTO,
+    RECURSIVE,
+    UNION,
+    ALL,
     
     // Operators
     GREATER_THAN,

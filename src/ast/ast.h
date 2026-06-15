@@ -97,15 +97,18 @@ private:
 
 class WithNode : public AstNode {
 public:
-    WithNode(const std::string& alias, std::unique_ptr<QueryNode> query);
-    
+    WithNode(std::string alias, std::unique_ptr<QueryNode> query, bool is_recursive = false)
+        : alias_(std::move(alias)), query_(std::move(query)), is_recursive_(is_recursive) {}
+
     NodeType GetType() const override { return NodeType::WITH; }
     const std::string& GetAlias() const { return alias_; }
     const QueryNode* GetQuery() const { return query_.get(); }
+    bool IsRecursive() const { return is_recursive_; }
 
 private:
     std::string alias_;
     std::unique_ptr<QueryNode> query_;
+    bool is_recursive_;
 };
 
 class SelectNode : public AstNode {
@@ -186,6 +189,13 @@ public:
     const std::string& GetIntoFile() const { return into_file_; }
     void SetIntoFile(const std::string& file) { into_file_ = file; }
 
+    const QueryNode* GetUnionQuery() const { return union_query_.get(); }
+    bool IsUnionAll() const { return is_union_all_; }
+    void SetUnion(std::unique_ptr<QueryNode> union_query, bool is_union_all) {
+        union_query_ = std::move(union_query);
+        is_union_all_ = is_union_all;
+    }
+
 private:
     std::unique_ptr<SourceNode> source_;
     std::vector<std::unique_ptr<JoinNode>> join_clauses_;
@@ -197,6 +207,9 @@ private:
     std::unique_ptr<HavingNode> having_clause_;
     std::vector<std::unique_ptr<WithNode>> with_clauses_;
     std::string into_file_;
+    
+    std::unique_ptr<QueryNode> union_query_;
+    bool is_union_all_ = false;
 };
 
 } // namespace ast

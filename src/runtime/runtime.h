@@ -27,10 +27,10 @@ public:
     Runtime();
 
     void SetFormat(utils::OutputFormat format);
-    void Execute(const ast::QueryNode* query);
+    void Execute(const ast::QueryNode* query, bool ignore_unions = false);
     void CollectIdentifiers(const ast::AstNode* node, std::vector<std::string>& cols);
     void CollectAggregates(const ast::AstNode* node, std::vector<const ast::ExpressionNode*>& aggs);
-    std::vector<adapters::Row> ExecuteToMemory(const ast::QueryNode* query);
+    std::vector<adapters::Row> ExecuteToMemory(const ast::QueryNode* query, bool ignore_unions = false);
 
 private:
     std::unique_ptr<adapters::IAdapter> GetAdapterForSource(const std::string& source);

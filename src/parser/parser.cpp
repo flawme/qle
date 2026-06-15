@@ -110,6 +110,15 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
     q->SetHaving(std::move(having_clause));
     q->SetWithClauses(std::move(with_clauses));
     if (!into_file.empty()) q->SetIntoFile(into_file);
+    
+    if (Match({lexer::TokenType::UNION})) {
+        bool is_union_all = false;
+        if (Match({lexer::TokenType::ALL})) {
+            is_union_all = true;
+        }
+        q->SetUnion(Parse(), is_union_all);
+    }
+    
     return q;
 }
 
@@ -194,6 +203,10 @@ std::unique_ptr<ast::HavingNode> Parser::ParseHaving() {
 
 std::vector<std::unique_ptr<ast::WithNode>> Parser::ParseWith() {
     std::vector<std::unique_ptr<ast::WithNode>> with_nodes;
+    bool is_recursive = false;
+    if (Match({lexer::TokenType::RECURSIVE})) {
+        is_recursive = true;
+    }
     do {
         Consume(lexer::TokenType::IDENTIFIER, "Expect CTE alias after WITH.");
         std::string alias = Previous().value;
@@ -202,7 +215,7 @@ std::vector<std::unique_ptr<ast::WithNode>> Parser::ParseWith() {
         auto query = Parse();
         Consume(lexer::TokenType::RIGHT_PAREN, "Expect ')' after CTE subquery.");
         TrackNodeCreation();
-        with_nodes.push_back(std::make_unique<ast::WithNode>(alias, std::move(query)));
+        with_nodes.push_back(std::make_unique<ast::WithNode>(alias, std::move(query), is_recursive));
     } while (Match({lexer::TokenType::COMMA}));
     return with_nodes;
 }

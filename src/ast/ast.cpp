@@ -24,8 +24,7 @@ WhereNode::WhereNode(std::unique_ptr<ExpressionNode> condition)
 HavingNode::HavingNode(std::unique_ptr<ExpressionNode> condition)
     : condition_(std::move(condition)) {}
 
-WithNode::WithNode(const std::string& alias, std::unique_ptr<QueryNode> query)
-    : alias_(alias), query_(std::move(query)) {}
+
 
 SelectNode::SelectNode(std::vector<std::unique_ptr<ExpressionNode>> fields, bool is_wildcard)
     : fields_(std::move(fields)), is_wildcard_(is_wildcard) {}

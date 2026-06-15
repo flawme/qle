@@ -27,6 +27,14 @@ public:
         return data.end();
     }
     
+    bool operator==(const Row& other) const {
+        if (data.size() != other.data.size()) return false;
+        for (size_t i = 0; i < data.size(); ++i) {
+            if (data[i] != other.data[i]) return false;
+        }
+        return true;
+    }
+
     auto find(const std::string& key) {
         for (auto it = data.begin(); it != data.end(); ++it) {
             if (it->first == key) return it;

@@ -24,6 +24,9 @@ std::string ToString(TokenType type) {
         case TokenType::ON: return "ON";
         case TokenType::LIKE: return "LIKE";
         case TokenType::INTO: return "INTO";
+        case TokenType::RECURSIVE: return "RECURSIVE";
+        case TokenType::UNION: return "UNION";
+        case TokenType::ALL: return "ALL";
         case TokenType::GREATER_THAN: return ">";
         case TokenType::LESS_THAN: return "<";
         case TokenType::EQUALS: return "==";
