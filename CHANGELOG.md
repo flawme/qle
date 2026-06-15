@@ -5,6 +5,7 @@
 ### Added
 - **Export Adapters (`INTO` Clauses):** Added the ability to export queries directly into massive files on disk instantly. Users can now run `select ... into output.csv` or `into output.json` or `into output.tsv` to pipe data directly to disk without logging to the shell.
 - **TSV Adapter**: Added out-of-the-box support for querying `.tsv` flat files natively.
+- **Parquet Adapter**: Introduced zero C++ dependency support for querying `.parquet` binary columnar files! QLE intelligently bridges to the system Python environment (via Pandas) to stream Parquet files instantaneously into the execution engine.
 
 ### Optimized
 - **Sorting Speed:** $O(N \log N)$ `ORDER BY` operations were massively improved by pre-computing string-to-double extractions into a parallel `SortItem` array prior to sorting. This stripped out redundant string-casts and allocations during priority-queue merging and comparisons, dropping numeric sort times from `~3198 ms` to `~2057 ms` and string sort times from `~2307 ms` to `~1759 ms`.

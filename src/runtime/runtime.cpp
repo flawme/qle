@@ -15,6 +15,7 @@
 #include "adapters/json/json_adapter.h"
 #include "adapters/yaml/yaml_adapter.h"
 #include "adapters/xml/xml_adapter.h"
+#include "adapters/parquet/parquet_adapter.h"
 #include "errors/errors.h"
 #include "security/limits.h"
 #include "logger/logger.h"
@@ -146,6 +147,9 @@ std::unique_ptr<adapters::IAdapter> Runtime::GetAdapterForSource(
     }
     if (source.size() > 5 && source.substr(source.size() - 5) == ".json") {
         return std::make_unique<adapters::json::JsonAdapter>();
+    }
+    if (source.size() > 8 && source.substr(source.size() - 8) == ".parquet") {
+        return std::make_unique<adapters::parquet::ParquetAdapter>();
     }
     if (source.find(".sqlite") != std::string::npos || source.find(".db") != std::string::npos) {
         return std::make_unique<adapters::SQLiteAdapter>();

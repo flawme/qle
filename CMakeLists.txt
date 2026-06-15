@@ -14,6 +14,7 @@ include_directories(src)
 # Source files
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS src/*.cpp)
 list(APPEND SRC_FILES "${CMAKE_SOURCE_DIR}/src/adapters/sqlite/sqlite3.c")
+list(APPEND SRC_FILES "${CMAKE_SOURCE_DIR}/src/adapters/parquet/parquet_adapter.cpp")
 
 # Remove main from SRC_FILES if building tests
 list(REMOVE_ITEM SRC_FILES "${CMAKE_SOURCE_DIR}/src/main.cpp")

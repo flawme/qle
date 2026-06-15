@@ -1,0 +1,8 @@
+-- Querying Parquet Data
+-- Note: Requires python3, pandas, and pyarrow installed on the system path.
+
+from users.parquet
+where age > 25
+select name, age, city
+order by age desc
+limit 10
