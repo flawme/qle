@@ -12,7 +12,7 @@ namespace qle {
 namespace adapters {
 namespace csv {
 
-CsvAdapter::CsvAdapter() : fd_(-1), mmap_data_(nullptr), mmap_size_(0), offset_(0), end_offset_(0), is_child_(false) {}
+CsvAdapter::CsvAdapter(char delimiter) : fd_(-1), mmap_data_(nullptr), mmap_size_(0), offset_(0), end_offset_(0), is_child_(false), delimiter_(delimiter) {}
 
 CsvAdapter::~CsvAdapter() {
     Close();
@@ -57,7 +57,7 @@ void CsvAdapter::ReadHeaders() {
     
     size_t start = 0;
     size_t comma = 0;
-    while ((comma = line.find(',', start)) != std::string::npos) {
+    while ((comma = line.find(delimiter_, start)) != std::string::npos) {
         headers_.push_back(line.substr(start, comma - start));
         start = comma + 1;
     }
@@ -106,7 +106,7 @@ Row CsvAdapter::Next() {
         char c = mmap_data_[i];
         if (c == '"') {
             in_quotes = !in_quotes;
-        } else if (c == ',' && !in_quotes) {
+        } else if (c == delimiter_ && !in_quotes) {
             if (col_idx < n_headers && is_projected_[col_idx]) {
                 const char* start_ptr = mmap_data_ + cell_start;
                 size_t len = i - cell_start;

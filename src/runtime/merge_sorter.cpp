@@ -10,33 +10,45 @@ std::vector<adapters::Row> MergeSorter::Merge(
     std::vector<std::vector<adapters::Row>>& sorted_splits,
     const ast::OrderByNode* order_by) {
     
-    std::vector<adapters::Row> result;
-    size_t total_size = 0;
-    for (const auto& split : sorted_splits) {
-        total_size += split.size();
-    }
-    result.reserve(total_size);
-
     const std::string& field = order_by->GetField();
     bool descending = (order_by->GetDirection() == ast::OrderDirection::DESC);
 
-    auto comp = [&field, descending](const adapters::Row& a, const adapters::Row& b) {
-        auto it_a = a.find(field);
-        auto it_b = b.find(field);
-        std::string val_a = (it_a != a.end()) ? it_a->second : "";
-        std::string val_b = (it_b != b.end()) ? it_b->second : "";
-
-        double num_a, num_b;
-        char* endptr_a = nullptr; char* endptr_b = nullptr;
-        num_a = std::strtod(val_a.c_str(), &endptr_a);
-        num_b = std::strtod(val_b.c_str(), &endptr_b);
-        bool is_num_a = (!val_a.empty() && endptr_a != val_a.c_str() && *endptr_a == '\0');
-        bool is_num_b = (!val_b.empty() && endptr_b != val_b.c_str() && *endptr_b == '\0');
-
-        if (is_num_a && is_num_b) {
-            return descending ? (num_a > num_b) : (num_a < num_b);
+    struct SortItem {
+        double num_val;
+        std::string str_val;
+        bool is_num;
+        adapters::Row row;
+    };
+    
+    std::vector<std::vector<SortItem>> sorted_items;
+    sorted_items.resize(sorted_splits.size());
+    
+    size_t total_size = 0;
+    for (size_t i = 0; i < sorted_splits.size(); ++i) {
+        total_size += sorted_splits[i].size();
+        sorted_items[i].reserve(sorted_splits[i].size());
+        for (auto& row : sorted_splits[i]) {
+            auto it = row.find(field);
+            std::string val = (it != row.end()) ? it->second : "";
+            double num = 0;
+            bool is_num = false;
+            if (!val.empty()) {
+                char* endptr = nullptr;
+                num = std::strtod(val.c_str(), &endptr);
+                is_num = (endptr != val.c_str() && *endptr == '\0');
+            }
+            sorted_items[i].push_back({num, std::move(val), is_num, std::move(row)});
         }
-        return descending ? (val_a > val_b) : (val_a < val_b);
+    }
+
+    std::vector<adapters::Row> result;
+    result.reserve(total_size);
+
+    auto comp = [descending](const SortItem& a, const SortItem& b) {
+        if (a.is_num && b.is_num) {
+            return descending ? (a.num_val > b.num_val) : (a.num_val < b.num_val);
+        }
+        return descending ? (a.str_val > b.str_val) : (a.str_val < b.str_val);
     };
     
     struct Element {
@@ -44,16 +56,16 @@ std::vector<adapters::Row> MergeSorter::Merge(
         size_t row_idx;
     };
     
-    auto pq_comp = [&sorted_splits, &comp](const Element& a, const Element& b) {
-        const auto& row_a = sorted_splits[a.split_idx][a.row_idx];
-        const auto& row_b = sorted_splits[b.split_idx][b.row_idx];
-        return comp(row_b, row_a);
+    auto pq_comp = [&sorted_items, &comp](const Element& a, const Element& b) {
+        const auto& item_a = sorted_items[a.split_idx][a.row_idx];
+        const auto& item_b = sorted_items[b.split_idx][b.row_idx];
+        return comp(item_b, item_a);
     };
 
     std::priority_queue<Element, std::vector<Element>, decltype(pq_comp)> pq(pq_comp);
 
-    for (size_t i = 0; i < sorted_splits.size(); ++i) {
-        if (!sorted_splits[i].empty()) {
+    for (size_t i = 0; i < sorted_items.size(); ++i) {
+        if (!sorted_items[i].empty()) {
             pq.push({i, 0});
         }
     }
@@ -62,10 +74,10 @@ std::vector<adapters::Row> MergeSorter::Merge(
         Element top = pq.top();
         pq.pop();
 
-        result.push_back(std::move(sorted_splits[top.split_idx][top.row_idx]));
+        result.push_back(std::move(sorted_items[top.split_idx][top.row_idx].row));
         top.row_idx++;
 
-        if (top.row_idx < sorted_splits[top.split_idx].size()) {
+        if (top.row_idx < sorted_items[top.split_idx].size()) {
             pq.push(top);
         }
     }

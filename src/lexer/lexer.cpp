@@ -148,6 +148,7 @@ Token Lexer::ReadIdentifierOrKeyword() {
     if (lower_val == "join") return {TokenType::JOIN, lower_val, start_line, start_col};
     if (lower_val == "on") return {TokenType::ON, lower_val, start_line, start_col};
     if (lower_val == "like") return {TokenType::LIKE, lower_val, start_line, start_col};
+    if (lower_val == "into") return {TokenType::INTO, lower_val, start_line, start_col};
     if (lower_val == "and") return {TokenType::AND, lower_val, start_line, start_col};
     if (lower_val == "or") return {TokenType::OR, lower_val, start_line, start_col};
 

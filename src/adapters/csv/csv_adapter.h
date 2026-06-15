@@ -10,7 +10,7 @@ namespace csv {
 
 class CsvAdapter : public IAdapter {
 public:
-    CsvAdapter();
+    CsvAdapter(char delimiter = ',');
     ~CsvAdapter() override;
     
     void Open(const std::string& source) override;
@@ -30,6 +30,7 @@ private:
     size_t offset_;
     size_t end_offset_;
     bool is_child_ = false;
+    char delimiter_;
     
     std::vector<std::string> headers_;
     std::vector<std::string> projected_cols_;

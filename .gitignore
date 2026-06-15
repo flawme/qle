@@ -5,3 +5,10 @@ output.log
 large_users.csv
 generate_data.py
 .DS_Store
+
+# Ignore large generated data files
+bench.*
+benchmarks_v2/venv/
+benchmarks_v2/data_*
+join*.csv
+large.csv

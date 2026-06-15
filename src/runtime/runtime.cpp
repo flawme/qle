@@ -57,6 +57,18 @@ void Runtime::Execute(const ast::QueryNode* query) {
     rows_processed_ = 0;
     start_time_ = std::chrono::steady_clock::now();
 
+    if (!query->GetIntoFile().empty() && !execute_to_memory_) {
+        std::string into = query->GetIntoFile();
+        formatter_.SetOutputFile(into);
+        if (into.size() >= 4 && into.substr(into.size() - 4) == ".csv") {
+            format_ = utils::OutputFormat::CSV;
+        } else if (into.size() >= 4 && into.substr(into.size() - 4) == ".tsv") {
+            format_ = utils::OutputFormat::TSV;
+        } else if (into.size() >= 5 && into.substr(into.size() - 5) == ".json") {
+            format_ = utils::OutputFormat::JSON;
+        }
+    }
+
     // Execute CTEs
     for (const auto& with_node : query->GetWithClauses()) {
         Runtime sub_rt;
@@ -118,7 +130,11 @@ std::unique_ptr<adapters::IAdapter> Runtime::GetAdapterForSource(
     }
     if (source.size() > 4 &&
         source.substr(source.size() - 4) == ".csv") {
-        return std::make_unique<adapters::csv::CsvAdapter>();
+        return std::make_unique<adapters::csv::CsvAdapter>(',');
+    }
+    if (source.size() > 4 &&
+        source.substr(source.size() - 4) == ".tsv") {
+        return std::make_unique<adapters::csv::CsvAdapter>('\t');
     }
     if (source.size() > 5 &&
         (source.substr(source.size() - 5) == ".yaml" || source.substr(source.size() - 4) == ".yml")) {

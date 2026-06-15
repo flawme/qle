@@ -26,6 +26,7 @@ from <source_file | (subquery)>
 select <field1, field2 | * | count | sum(field) | avg(field) | min(field) | max(field)>
 [order by <field> [asc|desc]]
 [limit <number>]
+[into <filename.csv | .tsv | .json>]
 ```
 
 
@@ -57,6 +58,19 @@ You can use the `like` operator in your `where` clauses to perform regex-style p
 **Count matching rows:**
 ```bash
 ./qle "from data.json where status == 'active' select count"
+```
+
+## Exporting Data (Output Adapters)
+
+Instead of printing results to the console, you can instantly stream and translate the output of a query into a new file using the `into` clause at the very end of your query.
+
+*Example (Translating a massive XML file into JSON):*
+```bash
+./qle "from source.xml select id, name, price into output.json"
+```
+*Example (Filtering a TSV into a CSV):*
+```bash
+./qle "from logs.tsv where user_id == 5 select timestamp, message into logs.csv"
 ```
 
 ## Running File-Based Queries

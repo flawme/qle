@@ -167,25 +167,40 @@ void Runtime::SortRows(std::vector<adapters::Row>& rows, const ast::OrderByNode*
     const std::string& field = order_by->GetField();
     bool descending = (order_by->GetDirection() == ast::OrderDirection::DESC);
 
-    std::stable_sort(rows.begin(), rows.end(),
-        [&field, descending](const adapters::Row& a, const adapters::Row& b) {
-            auto it_a = a.find(field);
-            auto it_b = b.find(field);
-            std::string val_a = (it_a != a.end()) ? it_a->second : "";
-            std::string val_b = (it_b != b.end()) ? it_b->second : "";
+    struct SortItem {
+        double num_val;
+        std::string str_val;
+        bool is_num;
+        adapters::Row row;
+    };
 
-            double num_a, num_b;
-            char* endptr_a = nullptr; char* endptr_b = nullptr;
-            num_a = std::strtod(val_a.c_str(), &endptr_a);
-            num_b = std::strtod(val_b.c_str(), &endptr_b);
-            bool is_num_a = (!val_a.empty() && endptr_a != val_a.c_str() && *endptr_a == '\0');
-            bool is_num_b = (!val_b.empty() && endptr_b != val_b.c_str() && *endptr_b == '\0');
+    std::vector<SortItem> items;
+    items.reserve(rows.size());
+    for (auto& row : rows) {
+        auto it = row.find(field);
+        std::string val = (it != row.end()) ? it->second : "";
+        double num = 0;
+        bool is_num = false;
+        if (!val.empty()) {
+            char* endptr = nullptr;
+            num = std::strtod(val.c_str(), &endptr);
+            is_num = (endptr != val.c_str() && *endptr == '\0');
+        }
+        items.push_back({num, std::move(val), is_num, std::move(row)});
+    }
 
-            if (is_num_a && is_num_b) {
-                return descending ? (num_a > num_b) : (num_a < num_b);
+    std::stable_sort(items.begin(), items.end(),
+        [descending](const SortItem& a, const SortItem& b) {
+            if (a.is_num && b.is_num) {
+                return descending ? (a.num_val > b.num_val) : (a.num_val < b.num_val);
             }
-            return descending ? (val_a > val_b) : (val_a < val_b);
+            return descending ? (a.str_val > b.str_val) : (a.str_val < b.str_val);
         });
+
+    rows.clear();
+    for (auto& item : items) {
+        rows.push_back(std::move(item.row));
+    }
 }
 
 } // namespace runtime

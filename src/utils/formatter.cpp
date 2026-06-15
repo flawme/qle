@@ -3,19 +3,31 @@
 #include <algorithm>
 #include <iomanip>
 
+#include "errors/errors.h"
+
 namespace qle {
 namespace utils {
+
+void Formatter::SetOutputFile(const std::string& filename) {
+    if (file_stream_.is_open()) file_stream_.close();
+    file_stream_.open(filename);
+    if (!file_stream_.is_open()) {
+        throw errors::RuntimeError("Could not open output file: " + filename);
+    }
+    out_stream_ = &file_stream_;
+}
 
 void Formatter::PrintHeader(const std::vector<std::string>& fields, OutputFormat format) {
     if (format == OutputFormat::TABLE) {
         headers_ = fields;
-    } else if (format == OutputFormat::CSV) {
+    } else if (format == OutputFormat::CSV || format == OutputFormat::TSV) {
+        std::string delim = (format == OutputFormat::CSV) ? "," : "\t";
         for (size_t i = 0; i < fields.size(); ++i) {
-            std::cout << fields[i] << (i + 1 == fields.size() ? "" : ",");
+            (*out_stream_) << fields[i] << (i + 1 == fields.size() ? "" : delim);
         }
-        std::cout << std::endl;
+        (*out_stream_) << "\n";
     } else if (format == OutputFormat::JSON) {
-        std::cout << "[" << std::endl;
+        (*out_stream_) << "[\n";
         first_json_row_ = true;
     }
 }
@@ -28,24 +40,25 @@ void Formatter::PrintRow(const adapters::Row& row, const std::vector<std::string
             row_data.push_back(it != row.end() ? it->second : "");
         }
         buffered_rows_.push_back(std::move(row_data));
-    } else if (format == OutputFormat::CSV) {
+    } else if (format == OutputFormat::CSV || format == OutputFormat::TSV) {
+        std::string delim = (format == OutputFormat::CSV) ? "," : "\t";
         for (size_t i = 0; i < fields.size(); ++i) {
             auto it = row.find(fields[i]);
-            std::cout << (it != row.end() ? it->second : "") << (i + 1 == fields.size() ? "" : ",");
+            (*out_stream_) << (it != row.end() ? it->second : "") << (i + 1 == fields.size() ? "" : delim);
         }
-        std::cout << std::endl;
+        (*out_stream_) << "\n";
     } else if (format == OutputFormat::JSON) {
         if (!first_json_row_) {
-            std::cout << "," << std::endl;
+            (*out_stream_) << ",\n";
         }
         first_json_row_ = false;
-        std::cout << "  {" << std::endl;
+        (*out_stream_) << "  {\n";
         for (size_t i = 0; i < fields.size(); ++i) {
             auto it = row.find(fields[i]);
             std::string val = (it != row.end() ? it->second : "");
-            std::cout << "    \"" << fields[i] << "\": \"" << val << "\"" << (i + 1 == fields.size() ? "" : ", ") << std::endl;
+            (*out_stream_) << "    \"" << fields[i] << "\": \"" << val << "\"" << (i + 1 == fields.size() ? "" : ", ") << "\n";
         }
-        std::cout << "  }";
+        (*out_stream_) << "  }";
     }
 }
 
@@ -65,33 +78,34 @@ void Formatter::Flush(OutputFormat format) {
         }
         
         auto print_sep = [&]() {
-            std::cout << "+";
-            for (size_t w : col_widths) std::cout << std::string(w + 2, '-') << "+";
-            std::cout << std::endl;
+            (*out_stream_) << "+";
+            for (size_t w : col_widths) (*out_stream_) << std::string(w + 2, '-') << "+";
+            (*out_stream_) << "\n";
         };
         
         print_sep();
-        std::cout << "|";
+        (*out_stream_) << "|";
         for (size_t i = 0; i < headers_.size(); ++i) {
-            std::cout << " " << std::left << std::setw(col_widths[i]) << headers_[i] << " |";
+            (*out_stream_) << " " << std::left << std::setw(col_widths[i]) << headers_[i] << " |";
         }
-        std::cout << std::endl;
+        (*out_stream_) << "\n";
         print_sep();
         
         for (const auto& row : buffered_rows_) {
-            std::cout << "|";
+            (*out_stream_) << "|";
             for (size_t i = 0; i < row.size() && i < col_widths.size(); ++i) {
-                std::cout << " " << std::left << std::setw(col_widths[i]) << row[i] << " |";
+                (*out_stream_) << " " << std::left << std::setw(col_widths[i]) << row[i] << " |";
             }
-            std::cout << std::endl;
+            (*out_stream_) << "\n";
         }
         print_sep();
         
         buffered_rows_.clear();
         headers_.clear();
     } else if (format == OutputFormat::JSON) {
-        std::cout << std::endl << "]" << std::endl;
+        (*out_stream_) << "\n]\n";
     }
+    out_stream_->flush();
 }
 
 } // namespace utils

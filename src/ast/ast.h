@@ -183,6 +183,8 @@ public:
 
     void SetHaving(std::unique_ptr<HavingNode> having) { having_clause_ = std::move(having); }
     void SetWithClauses(std::vector<std::unique_ptr<WithNode>> withs) { with_clauses_ = std::move(withs); }
+    const std::string& GetIntoFile() const { return into_file_; }
+    void SetIntoFile(const std::string& file) { into_file_ = file; }
 
 private:
     std::unique_ptr<SourceNode> source_;
@@ -194,6 +196,7 @@ private:
     std::unique_ptr<GroupByNode> group_by_;
     std::unique_ptr<HavingNode> having_clause_;
     std::vector<std::unique_ptr<WithNode>> with_clauses_;
+    std::string into_file_;
 };
 
 } // namespace ast

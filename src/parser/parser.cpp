@@ -33,6 +33,7 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
     std::unique_ptr<ast::GroupByNode> group_by = nullptr;
     std::unique_ptr<ast::HavingNode> having_clause = nullptr;
     std::vector<std::unique_ptr<ast::WithNode>> with_clauses;
+    std::string into_file;
 
     while (!IsAtEnd() && !Check(lexer::TokenType::RIGHT_PAREN)) {
         if (Match({lexer::TokenType::WITH})) {
@@ -81,6 +82,16 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
                 throw errors::ParserError("Multiple HAVING clauses found", Previous().line, Previous().col);
             }
             having_clause = ParseHaving();
+        } else if (Match({lexer::TokenType::INTO})) {
+            if (!into_file.empty()) {
+                throw errors::ParserError("Multiple INTO clauses found", Previous().line, Previous().col);
+            }
+            if (Match({lexer::TokenType::STRING})) {
+                into_file = Previous().value;
+            } else {
+                Consume(lexer::TokenType::IDENTIFIER, "Expect filename after INTO");
+                into_file = Previous().value;
+            }
         } else {
             throw errors::ParserError("Unexpected token: " + Peek().value, Peek().line, Peek().col);
         }
@@ -98,6 +109,7 @@ std::unique_ptr<ast::QueryNode> Parser::Parse() {
     auto q = std::make_unique<ast::QueryNode>(std::move(source), std::move(join_clauses), std::move(where_clause), std::move(select_clause), limit, std::move(order_by), std::move(group_by));
     q->SetHaving(std::move(having_clause));
     q->SetWithClauses(std::move(with_clauses));
+    if (!into_file.empty()) q->SetIntoFile(into_file);
     return q;
 }
 
