@@ -3,9 +3,10 @@
 ## [v0.1.10] - 2026-06-15
 
 ### Added
+- **Recursive CTEs and UNION Support:** Full standard SQL support for `WITH RECURSIVE` Common Table Expressions! The engine now actively parses `UNION` and `UNION ALL` statements, executing multi-query results natively. Recursive CTEs intelligently loop through child queries dynamically, executing until 0 rows are returned.
 - **Export Adapters (`INTO` Clauses):** Added the ability to export queries directly into massive files on disk instantly. Users can now run `select ... into output.csv` or `into output.json` or `into output.tsv` to pipe data directly to disk without logging to the shell.
 - **TSV Adapter**: Added out-of-the-box support for querying `.tsv` flat files natively.
-- **Parquet Adapter**: Introduced zero C++ dependency support for querying `.parquet` binary columnar files! QLE intelligently bridges to the system Python environment (via Pandas) to stream Parquet files instantaneously into the execution engine.
+- **Native Parquet Adapter**: Completely replaced the heavy Python/Pandas bridging script with a 100% native, zero-dependency C++ implementation powered by `tinyparquet`! QLE can now instantly execute zero-copy queries against `.parquet` binary columnar files with extreme performance directly in memory.
 
 ### Optimized
 - **Sorting Speed:** $O(N \log N)$ `ORDER BY` operations were massively improved by pre-computing string-to-double extractions into a parallel `SortItem` array prior to sorting. This stripped out redundant string-casts and allocations during priority-queue merging and comparisons, dropping numeric sort times from `~3198 ms` to `~2057 ms` and string sort times from `~2307 ms` to `~1759 ms`.

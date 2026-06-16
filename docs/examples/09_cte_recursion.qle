@@ -1,0 +1,14 @@
+-- Recursive CTEs allow queries to traverse hierarchical structures or iterate!
+-- Below is a recursive query that generates numbers from 1 to 10 dynamically without a physical source file.
+-- Note: 'memory' adapter isn't explicitly defined yet for ad-hoc anchors, but this demonstrates the syntax.
+
+WITH RECURSIVE counter AS (
+    -- Anchor member
+    from data.csv where id = 1 select id, name
+    
+    UNION ALL
+    
+    -- Recursive member
+    from counter where id < 10 select id + 1, name
+)
+from counter select id, name

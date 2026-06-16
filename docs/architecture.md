@@ -27,6 +27,7 @@ The Runtime executes the AST. The monolithic `runtime.cpp` was recently decouple
 Data extraction is entirely decoupled from the runtime. Adapters implement the `IAdapter` interface, guaranteeing `Open()`, `HasNext()`, `Next()`, and `Close()` functionality. Supported formats are:
 - **CSV**: Streams comma-separated text.
 - **JSON**: Streams JSON object arrays.
+- **Parquet**: Executes native, zero-dependency C++ columnar streaming by wrapping the embedded `tinyparquet` parser.
 - **SQLite**: Connects natively to `.sqlite` or `.db` databases using the SQLite C API. 
 - **YAML**: Recursively streams YAML flat objects dynamically.
 - **XML**: A zero-dependency stream parser to process massive nested tag structures.
