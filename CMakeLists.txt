@@ -9,15 +9,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_compile_options(-Wall -Wextra)
 
 # Include directories
-include_directories(src third_party/miniz third_party/zstd third_party/brotli/c/include)
+include_directories(src third_party/tinyparquet/third_party/miniz third_party/tinyparquet/third_party/zstd third_party/tinyparquet/third_party/brotli/c/include)
 
 # Source files
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS src/*.cpp)
 list(APPEND SRC_FILES "${CMAKE_SOURCE_DIR}/src/adapters/sqlite/sqlite3.c")
 list(APPEND SRC_FILES "${CMAKE_SOURCE_DIR}/src/adapters/parquet/parquet_adapter.cpp")
-list(APPEND SRC_FILES "${CMAKE_SOURCE_DIR}/third_party/miniz/miniz.c")
-list(APPEND SRC_FILES "${CMAKE_SOURCE_DIR}/third_party/zstd/zstd.c")
-file(GLOB_RECURSE BROTLI_FILES "${CMAKE_SOURCE_DIR}/third_party/brotli/c/*.c")
+list(APPEND SRC_FILES "${CMAKE_SOURCE_DIR}/third_party/tinyparquet/third_party/miniz/miniz.c")
+list(APPEND SRC_FILES "${CMAKE_SOURCE_DIR}/third_party/tinyparquet/third_party/zstd/zstd.c")
+file(GLOB_RECURSE BROTLI_FILES "${CMAKE_SOURCE_DIR}/third_party/tinyparquet/third_party/brotli/c/*.c")
 list(APPEND SRC_FILES ${BROTLI_FILES})
 
 # Remove main from SRC_FILES if building tests

@@ -1,5 +1,5 @@
 #include "adapters/parquet/parquet_adapter.h"
-#include "adapters/parquet/tinyparquet.hpp"
+#include "../../../third_party/tinyparquet/tinyparquet.hpp"
 #include "errors/errors.h"
 #include "security/path_validator.h"
 
