@@ -3,7 +3,12 @@
 #include "adapters/adapter.h"
 #include <string>
 #include <vector>
-#include <cstdio>
+#include <memory>
+
+// Forward declare the reader so we don't have to include all of tinyparquet in the header.
+namespace tinyparquet {
+    class Reader;
+}
 
 namespace qle {
 namespace adapters {
@@ -21,15 +26,16 @@ public:
     void SetProjectedColumns(const std::vector<std::string>& cols) override;
 
 private:
-    FILE* pipe_;
-    std::vector<std::string> headers_;
+    std::unique_ptr<tinyparquet::Reader> reader_;
     std::vector<std::string> projected_cols_;
-    std::vector<bool> is_projected_;
-    bool has_next_;
-    std::string next_line_;
-
-    void ReadHeaders();
-    bool ReadLine();
+    
+    // We store fully buffered string values for each projected column.
+    // In a future optimized version, this could be chunked.
+    std::vector<std::string> col_names_;
+    std::vector<std::vector<std::string>> col_data_;
+    
+    size_t current_row_ = 0;
+    size_t num_rows_ = 0;
 };
 
 } // namespace parquet
