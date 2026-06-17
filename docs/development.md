@@ -18,9 +18,11 @@ The project includes an integrated test suite spanning lexer logic, parser mecha
 To run the tests:
 ```bash
 cd build
-make
+make qle_tests
 ctest --output-on-failure
 ```
+
+*Note: The project is compiled with AddressSanitizer (ASAN) by default to strictly guarantee no memory leaks occur during testing.*
 
 ## Creating New Adapters
 

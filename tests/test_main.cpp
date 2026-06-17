@@ -23,6 +23,7 @@ void TestMaxRowsLimit();
 void TestTimeoutLimit();
 
 void TestYamlAdapter();
+void TestParquetAdapter();
 void TestLike();
 void TestXmlAdapter();
 void TestSubqueries();
@@ -256,7 +257,34 @@ int main() {
     TestCliLimits();
     TestMaxRowsLimit();
     TestTimeoutLimit();
+    TestParquetAdapter();
     std::cout << "All tests passed successfully!" << std::endl;
+}
+
+void TestParquetAdapter() {
+    std::cout << "Running Parquet Adapter Tests..." << std::endl;
+    std::ifstream src("../third_party/tinyparquet/testing/parquet-testing/data/alltypes_plain.parquet", std::ios::binary);
+    if (!src.good()) {
+        src.open("third_party/tinyparquet/testing/parquet-testing/data/alltypes_plain.parquet", std::ios::binary);
+    }
+    std::ofstream dst("alltypes_plain.parquet", std::ios::binary);
+    dst << src.rdbuf();
+    dst.close();
+    std::string parquet_file = "alltypes_plain.parquet";
+    
+    std::string query = "from \"" + parquet_file + "\" select id, int_col, string_col limit 5";
+    try {
+        lexer::Lexer lexer(query);
+        auto tokens = lexer.Tokenize();
+        parser::Parser parser(tokens);
+        auto ast = parser.Parse();
+        
+        runtime::Runtime runtime;
+        runtime.Execute(ast.get());
+    } catch (const std::exception& e) {
+        std::cerr << "Parquet adapter test failed: " << e.what() << std::endl;
+        assert(false);
+    }
 }
 
 void TestXmlAdapter() {
@@ -333,14 +361,14 @@ void TestLike() {
 
 void TestAdversarialNewFeatures() {
     std::cout << "Running Adversarial Tests for New Features..." << std::endl;
-    { std::ofstream out("empty.json"); out << "[]"; out.close(); }
+    { std::ofstream out("empty.json"); out << "[{\"id\":1}]"; out.close(); }
 
     // 1. LIKE ReDoS / hanging pattern test
     std::string text(500, 'a');
     std::string pattern = "%";
     for(int i=0; i<400; i++) pattern += "a";
     pattern += "b";
-    std::string like_query = "from users.csv where \"" + text + "\" like \"" + pattern + "\" select id";
+    std::string like_query = "from empty.json where \"" + text + "\" like \"" + pattern + "\" select id";
     bool like_caught = false;
     try {
         qle::lexer::Lexer lexer(like_query);
@@ -353,7 +381,7 @@ void TestAdversarialNewFeatures() {
     assert(like_caught && "LIKE ReDoS should throw SecurityError");
 
     // 2. Date parser with potentially dangerous large inputs (UB on overflow)
-    std::string date_query = "from users.csv where year(\"2147483647-01-01\") == \"2147485547\" select id";
+    std::string date_query = "from empty.json where year(\"2147483647-01-01\") == \"2147485547\" select id";
     try {
         qle::lexer::Lexer lexer(date_query);
         qle::parser::Parser parser(lexer.Tokenize());
@@ -366,7 +394,7 @@ void TestAdversarialNewFeatures() {
     for (int i = 0; i < 200; ++i) {
         sub_query += "(from ";
     }
-    sub_query += "users.csv select id";
+    sub_query += "empty.json select id";
     for (int i = 0; i < 200; ++i) {
         sub_query += ") select id";
     }

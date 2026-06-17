@@ -5,8 +5,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Wall Wextra for code quality
-add_compile_options(-Wall -Wextra)
+# Wall Wextra for code quality, plus ASAN for leak detection
+add_compile_options(-Wall -Wextra -g -fsanitize=address -fno-omit-frame-pointer)
+add_link_options(-fsanitize=address)
 
 # Include directories
 include_directories(src third_party/tinyparquet/third_party/miniz third_party/tinyparquet/third_party/zstd third_party/tinyparquet/third_party/brotli/c/include)

@@ -1,5 +1,16 @@
 # QLE Changelog
 
+## [v0.1.11] - 2026-06-17
+
+### Added
+- **Systematic Hardening & ASAN**: Integrated AddressSanitizer (ASAN) into the CMake build pipeline to guarantee a completely memory-safe, leak-free engine runtime.
+- **Adversarial QA Fuzzing**: Added extensive QA tests directly into the suite that simulate massive file ingestion, malformed tokens, and path-traversal vulnerabilities to ensure the engine fails gracefully without crashing.
+- **Parquet Test Coverage**: Added integrated tests bridging `tinyparquet` dummy datasets to strictly validate binary reading natively in QLE.
+
+### Fixed
+- **LIKE Operator ReDoS**: Added a step limit to the vectorized `LIKE` evaluator to instantly block malicious regex-like queries from causing infinite hangs or Denial-of-Service attacks.
+- **Lexer Path Traversal Validation**: Extended the parser to properly handle quoted strings as file identifiers (`from "file.parquet"`), preventing issues with security limits when processing files in parent or nested subdirectories (`/`, `.`, `..`).
+
 ## [v0.1.10] - 2026-06-15
 
 ### Added

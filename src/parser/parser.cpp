@@ -174,9 +174,11 @@ std::unique_ptr<ast::SourceNode> Parser::ParseFrom() {
         TrackNodeCreation();
         return std::make_unique<ast::SourceNode>(std::move(subquery));
     }
-    Consume(lexer::TokenType::IDENTIFIER, "Expect source name after FROM.");
-    TrackNodeCreation();
-    return std::make_unique<ast::SourceNode>(Previous().value);
+    if (Match({lexer::TokenType::IDENTIFIER, lexer::TokenType::STRING})) {
+        TrackNodeCreation();
+        return std::make_unique<ast::SourceNode>(Previous().value);
+    }
+    throw errors::ParserError("Expect source name or string after FROM.", Peek().line, Peek().col);
 }
 
 

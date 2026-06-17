@@ -197,7 +197,9 @@ static VectorValue EvalVectorized(const ast::ExpressionNode* expr, const VectorB
                     size_t t_len = text.length(), p_len = pattern.length();
                     size_t star_idx = std::string::npos;
                     size_t match_idx = 0;
+                    size_t steps = 0;
                     while (t < t_len) {
+                        if (++steps > 10000) throw errors::SecurityError("LIKE operation time limit exceeded");
                         if (p < p_len && pattern[p] == '%') {
                             star_idx = p;
                             match_idx = t;
