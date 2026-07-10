@@ -6,8 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Wall Wextra for code quality, plus ASAN for leak detection
-add_compile_options(-Wall -Wextra -g -fsanitize=address -fno-omit-frame-pointer)
-add_link_options(-fsanitize=address)
+if(NOT MSVC)
+    add_compile_options(-Wall -Wextra -g -fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+endif()
 
 # Include directories
 include_directories(src third_party/tinyparquet/third_party/miniz third_party/tinyparquet/third_party/zstd third_party/tinyparquet/third_party/brotli/c/include)
@@ -30,7 +32,11 @@ target_compile_definitions(qle_core PUBLIC QLE_HAVE_SQLITE3 TINYPARQUET_ENABLE_G
 
 # Threading and dl required for native SQLite
 find_package(Threads REQUIRED)
-target_link_libraries(qle_core PUBLIC Threads::Threads dl)
+if(WIN32)
+    target_link_libraries(qle_core PUBLIC Threads::Threads)
+else()
+    target_link_libraries(qle_core PUBLIC Threads::Threads dl)
+endif()
 
 # Main executable
 add_executable(qle src/main.cpp)
