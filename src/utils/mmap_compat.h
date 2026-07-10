@@ -1,6 +1,9 @@
 #pragma once
 
 #ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #include <io.h>
 
@@ -31,7 +34,7 @@ static inline void *mmap(void *addr, size_t length, int prot, int flags, int fd,
         dwDesiredAccess = (flags & MAP_PRIVATE) ? FILE_MAP_COPY : FILE_MAP_WRITE;
     }
 
-    void *map = MapViewOfFile(hMapping, dwDesiredAccess, 0, (DWORD)(offset >> 32), (DWORD)(offset & 0xFFFFFFFF), length);
+    void *map = MapViewOfFile(hMapping, dwDesiredAccess, (DWORD)(offset >> 32), (DWORD)(offset & 0xFFFFFFFF), length);
     CloseHandle(hMapping);
 
     if (map == NULL) {

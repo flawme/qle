@@ -1,7 +1,7 @@
 #include "adapters/sqlite/sqlite_adapter.h"
 #include "errors/errors.h"
 #include <iostream>
-#include <sqlite3.h>
+#include "sqlite3.h"
 
 namespace qle {
 namespace adapters {
