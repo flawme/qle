@@ -516,6 +516,11 @@ void TestReplEdgeCases() {
     std::cout << "Running REPL Edge Cases..." << std::endl;
 }
 
+#ifdef _WIN32
+#define popen _popen
+#define pclose _pclose
+#endif
+
 // Helper to run shell commands and capture output
 std::string ExecCmd(const char* cmd) {
     std::array<char, 128> buffer;
