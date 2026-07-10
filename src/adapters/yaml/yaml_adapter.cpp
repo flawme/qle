@@ -2,10 +2,10 @@
 #include "errors/errors.h"
 #include "security/limits.h"
 #include "security/path_validator.h"
-#include <sys/mman.h>
+#include "utils/mmap_compat.h"
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
+
 
 namespace qle {
 namespace adapters {

@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Wall Wextra for code quality, plus ASAN for leak detection
+if(MSVC)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
+endif()
+
 if(NOT MSVC)
     add_compile_options(-Wall -Wextra -g -fsanitize=address -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address)
